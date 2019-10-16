@@ -103,10 +103,6 @@ int strbuf_getc(strbuf *sb)
 
     return c;
 }
-int strbuf_getoldc(strbuf *sb)
-{
-    return sb->buf[0];
-}
 void strbuf_ungetc(strbuf *sb, int c)
 {
     if (sb->buf[2] != -2)
@@ -123,4 +119,9 @@ void strbuf_concat(strbuf *sb, strbuf *b)
         strbuf_expand(sb, newlen);
     memcpy(sb->data + sb->len, b->data, b->len);
     sb->len = newlen;
+}
+void strbuf_print(strbuf *sb){
+    for(int i = 0; i < sb->len; i++){
+        putchar(sb->data[i]);
+    }
 }

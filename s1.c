@@ -16,12 +16,12 @@ int tklstlen = 0;
 int tklstcap = 0;
 strbuf tklst_str;
 
-const int BEG = 1;
-const int END = 2;
-const int STR = 3;
-const int CMT = 4;
-const int WORD = 5;
-const int OP = 6;
+#define BEG 1
+#define END 2
+#define STR 3
+#define CMT 4
+#define WORD 5
+#define OP 6
 
 // CRLF or CR to LF
 // rtrim the line
@@ -76,6 +76,38 @@ strbuf *step1(char *filename)
 
 	fclose(fp);
 	return sb;
+}
+void print_tklst()
+{
+	for (int i = 0; i < tklstlen; i++)
+	{
+		int t = tklst[i].type;
+		switch (t)
+		{
+		case BEG:
+		case END:
+			printf("%c ", tklst[i].str.data[0]);
+			break;
+		case WORD:
+		case OP:
+			strbuf_print(&tklst[i].str);
+			printf(" ");
+			break;
+		case STR:
+			printf("\"");
+			strbuf_print(&tklst[i].str);
+			printf("\" ");
+			break;
+		case CMT:
+			printf("#{");
+			strbuf_print(&tklst[i].str);
+			printf("} ");
+			break;
+		default:
+			fprintf(stderr, "unknown type %d\n", t);
+			abort();
+		}
+	}
 }
 
 void append(int type, strbuf *sb)
@@ -274,7 +306,7 @@ int main(int argc, char *argv[])
 				append(OP, operator);
 
 				strbuf_init(string);
-				state = 3; // we're in a string
+				state = 21; // we're in a string
 			}
 			else if (NULL != strchr("()[]{},_#.", c)) // these operators can not be overloaded
 			{
@@ -368,4 +400,5 @@ int main(int argc, char *argv[])
 			abort();
 		}
 	}
+	print_tklst();
 }

@@ -102,7 +102,7 @@ _id:str # _ means private
 @n->i{} #named
 @{} # infinte loop
 @{
-    @V # break
+    @; # break
     @> # continue
 }
 @slice->i,v{} # loop on a slice or map
@@ -136,5 +136,5 @@ f(g()) # oh, g()'s error will surely be ignored
 }
 @9{
     O`${co->}  # resume and get next value, co->i put the value into i
-    !{@V} # if co return false, then break the loop
+    !{@;} # if co return false, then break the loop
 }

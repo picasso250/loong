@@ -19,7 +19,7 @@ void strbuf_appendlf(strbuf *sb);
 void strbuf_concat(strbuf *sb, strbuf *b);
 void strbuf_fit(strbuf *sb);
 int strbuf_getc(strbuf *sb);
-int strbuf_getoldc(strbuf *sb);
 void strbuf_ungetc(strbuf *sb, int c);
+void strbuf_print(strbuf *sb);
 
 #endif
