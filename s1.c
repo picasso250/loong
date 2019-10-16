@@ -8,6 +8,7 @@
 typedef struct token
 {
 	int type;
+	int line; // 行号
 	strbuf str;
 } token;
 
@@ -85,6 +86,7 @@ void print_tklst()
 		switch (t)
 		{
 		case BEG:
+			printf("%d:", tklst[i].line);
 		case END:
 			printf("%c ", tklst[i].str.data[0]);
 			break;
@@ -110,7 +112,7 @@ void print_tklst()
 	}
 }
 
-void append(int type, strbuf *sb)
+void append(int type, int line, strbuf *sb)
 {
 	strbuf_fit(sb);
 
@@ -127,13 +129,14 @@ void append(int type, strbuf *sb)
 
 	token tk;
 	tk.type = type;
+	tk.line = line;
 	tk.str = *sb;
 	tklst[tklstlen++] = tk; // take str's char* away
 
 	// for debugging
 	strbuf_concat(&tklst_str, sb);
 }
-void append_end()
+void append_end(int line)
 {
 	static strbuf *sb = NULL;
 	if (sb == NULL)
@@ -141,9 +144,9 @@ void append_end()
 		sb = strbuf_new();
 		strbuf_append(sb, '$');
 	}
-	append(END, sb);
+	append(END, line, sb);
 }
-void append_begin()
+void append_begin(int line)
 {
 	static strbuf *sb = NULL;
 	if (sb == NULL)
@@ -151,7 +154,7 @@ void append_begin()
 		sb = strbuf_new();
 		strbuf_append(sb, '^');
 	}
-	append(BEG, sb);
+	append(BEG, line, sb);
 }
 int main(int argc, char *argv[])
 {
@@ -168,12 +171,13 @@ int main(int argc, char *argv[])
 
 	// ^, $, string, and comment (1 2 3 4)
 	int state = 0;
-	append_begin(); // append( 1, "^", 1); // first is ^
+	append_begin(1); // append( 1, "^", 1); // first is ^
 	strbuf *string = strbuf_new();
 	strbuf *comment = strbuf_new();
 	strbuf *word = strbuf_new();
 	strbuf *operator= strbuf_new();
 	int c;
+	int line = 1;
 	while ((c = strbuf_getc(sb)) != EOF)
 	{
 		switch (state)
@@ -191,8 +195,9 @@ int main(int argc, char *argv[])
 			}
 			else if (iscrlf(c))
 			{
-				append_end();
-				append_begin();
+				append_end(line);
+				line++;
+				append_begin(line);
 				state = 0;
 			}
 			else if (c == '"')
@@ -206,7 +211,7 @@ int main(int argc, char *argv[])
 				int next = strbuf_getc(sb);
 				if (next == EOF)
 				{
-					append(STR, string);
+					append(STR, line, string);
 					break;
 				}
 				if (next == '{')
@@ -224,13 +229,9 @@ int main(int argc, char *argv[])
 				strbuf_init(comment);
 				int next = strbuf_getc(sb);
 				if (next == EOF)
-				{
 					break;
-				}
 				if (next == '{')
-				{
-					state = 12; //multi-line comment
-				}
+					state = 12; // multi-line comment
 				else
 				{
 					strbuf_ungetc(sb, next);
@@ -254,26 +255,27 @@ int main(int argc, char *argv[])
 			else if (c == ' ')
 			{
 				// word end
-				append(WORD, word);
+				append(WORD, line, word);
 				state = 0;
 			}
 			else if (iscrlf(c))
 			{
-				append(WORD, word);
-				append_end();
-				append_begin();
+				append(WORD, line, word);
+				append_end(line);
+				line++;
+				append_begin(line);
 				state = 0;
 			}
 			else if (c == '"')
 			{
-				append(WORD, word);
+				append(WORD, line, word);
 				strbuf_init(string);
 				state = 3; // we're in a string
 			}
 			else
 			{
 				// operator
-				append(WORD, word);
+				append(WORD, line, word);
 				strbuf_init(operator);
 				strbuf_append(operator, c);
 				state = 2;
@@ -283,7 +285,7 @@ int main(int argc, char *argv[])
 		case 2: // operator
 			if (isalnum(c))
 			{
-				append(OP, operator);
+				append(OP, line, operator);
 
 				strbuf_init(word);
 				strbuf_append(word, c);
@@ -291,30 +293,31 @@ int main(int argc, char *argv[])
 			}
 			else if (c == ' ')
 			{
-				append(OP, operator);
+				append(OP, line, operator);
 				state = 0;
 			}
 			else if (iscrlf(c))
 			{
-				append(OP, operator);
-				append_end();
-				append_begin();
+				append(OP, line, operator);
+				append_end(line);
+				line++;
+				append_begin(line);
 				state = 0;
 			}
 			else if (c == '"')
 			{
-				append(OP, operator);
+				append(OP, line, operator);
 
 				strbuf_init(string);
 				state = 21; // we're in a string
 			}
 			else if (NULL != strchr("()[]{},_#.", c)) // these operators can not be overloaded
 			{
-				append(OP, operator);
+				append(OP, line, operator);
 
 				strbuf_init(operator);
 				strbuf_append(operator, c);
-				append(OP, operator);
+				append(OP, line, operator);
 
 				state = 0;
 			}
@@ -328,7 +331,10 @@ int main(int argc, char *argv[])
 		case 11: // comment
 			if (c == '\n')
 			{
-				append(CMT, comment);
+				append(CMT, line, comment);
+				append_end(line);
+				line++;
+				append_begin(line);
 				state = 0;
 			}
 			else
@@ -339,11 +345,13 @@ int main(int argc, char *argv[])
 		case 12: // multi-line comment
 			if (c == '}' && comment->len > 0 && comment->data[comment->len - 1] == '\n')
 			{
-				append(CMT, comment);
+				append(CMT, line, comment);
 				state = 0;
 			}
 			else
 			{
+				if (c == '\n')
+					line++;
 				strbuf_append(comment, c);
 			}
 			break;
@@ -361,12 +369,16 @@ int main(int argc, char *argv[])
 			}
 			else if (c == '"')
 			{
-				append(STR, string);
+				append(STR, line, string);
 				strbuf_init(string);
 				state = 0; // we're out of string
 			}
 			else
 			{
+				if (c == '\n')
+				{
+					line++;
+				}
 				strbuf_append(string, c);
 			}
 			break;
@@ -374,7 +386,12 @@ int main(int argc, char *argv[])
 		case 22: // literal string
 			if (c == '\n')
 			{
-				append(STR, string);
+				append(STR, line, string);
+
+				append_end(line);
+				line++;
+				append_begin(line);
+
 				state = 0;
 			}
 			else
@@ -386,12 +403,17 @@ int main(int argc, char *argv[])
 		case 23: // here doc string
 			if (c == '}' && string->len > 0 && string->data[string->len - 1] == '\n')
 			{
-				append(STR, string);
+				append(STR, line, string);
 				state = 0;
 			}
 			else
 			{
+
 				strbuf_append(string, c);
+				if (c == '\n')
+				{
+					line++;
+				}
 			}
 			break;
 
@@ -400,5 +422,7 @@ int main(int argc, char *argv[])
 			abort();
 		}
 	}
+	if (tklstlen > 0)
+		tklstlen--; // remove trailing ^
 	print_tklst();
 }

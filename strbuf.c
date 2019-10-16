@@ -71,7 +71,7 @@ void rtrim(strbuf *sb)
     while (sb->len - 1 >= 0)
     {
         char c = sb->data[sb->len - 1];
-        if (!(c == ' ' || iscrlf(c)))
+        if (!(c == ' '))
             break;
         sb->len--;
     }
