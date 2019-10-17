@@ -21,8 +21,8 @@ typedef struct array
 } array;
 typedef struct slice
 {
-    cval *array;
-    struct cval *base;
+    struct cval *array;
+    char *base;
     int len;
 } slice;
 typedef slice str;
@@ -47,6 +47,7 @@ typedef struct cval
         float v_float; // float
         char v_byte;   // byte
         bool v_bool;   // bool
+        str v_str;     // string
         array v_array; // array
         slice v_slice; // slice
         map v_map;     // map
@@ -56,23 +57,19 @@ typedef struct cval
 // 32              31 --- 16        15 --- 0
 //  ^--sweep-flag   ^------^--type   ^-----^--ref-count
 
-#define make(t, ...) _Generic(t,                          \
-                              int                         \
-                              : _make_int(__VA_ARGS__),   \
-                                float                     \
-                              : _make_float(__VA_ARGS__), \
-                                byte                      \
-                              : _make_byte(__VA_ARGS__),  \
-                                bool                      \
-                              : _make_bool(__VA_ARGS__),  \
-                                array                     \
-                              : _make_array(__VA_ARGS__), \
-                                slice                     \
-                              : _make_slice(__VA_ARGS__), \
-                                map                       \
-                              : _make_map(__VA_ARGS__),   \
-                                str                       \
-                              : _make_str(__VA_ARGS__))
+#define var(x) _Generic(x,             \
+                        int            \
+                        : _make_int,   \
+                          float        \
+                        : _make_float, \
+                          byte         \
+                        : _make_byte,  \
+                          bool         \
+                        : _make_bool,  \
+                          char *       \
+                        : _make_str)(x)
+
+#define make(t, ...) _make_##t(__VA_ARGS__)
 
 #define _make_array(t, len) _make_array_((len), sizeof(t))
 
@@ -83,17 +80,11 @@ typedef struct cval
 #define _make_slice_3(t, len, cap) _make_slice__(_make_array(t, cap), len, cap)
 #define _make_slice_2(t, len) _make_slice__(_make_array(t, len), len, len)
 
-cval *_make_str(char *s)
-{
-    int len = strlen(s);
-    _make_slice_3(char, len, len + 1);
-}
-
 #define _VEC_GET_MACRO_1(_1, NAME, ...) NAME
 #define _make_map(...)                                      \
     _VEC_GET_MACRO_1(__VA_ARGS__, _make_map_1, _make_map_0) \
     (__VA_ARGS__)
 #define _make_map_1(len) _make_map_(len)
-#define _make_map_0() _make_map_1(0)
+#define _make_map_0() _make_map_(0)
 
 #endif
