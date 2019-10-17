@@ -37,6 +37,16 @@ cval *_make_slice_(cval *arr, int len)
     cval->v_slice.base = arr->v_array.base;
     return cval;
 }
+cval *_make_slice__(cval *arr, int len,int cap)
+{
+    if (len < 0)
+        error("len can not be negative");
+    if (cap < 0)
+        error("cap can not be negative");
+    if (len < cap)
+        error("len < cap %d < %d", len, cap);
+    return _make_slice_(arr, len);
+}
 
 #define _define_make_type_primary(t) \
     cval *_make_##t(##t v)           \
