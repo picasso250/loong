@@ -45,3 +45,13 @@
             abort();                                                                                               \
         }                                                                                                          \
     } while (0)
+
+#define checkMem(p)                                                                              \
+    do                                                                                           \
+    {                                                                                            \
+        if (!p)                                                                                  \
+        {                                                                                        \
+            fprintf(stderr, "%s:%d: memory allocation failed for %s\n", __FILE__, __LINE__, #p); \
+            abort();                                                                             \
+        }                                                                                        \
+    } while (0)
