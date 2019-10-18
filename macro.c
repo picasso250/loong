@@ -18,8 +18,6 @@
 
 
 
-
-
 #define do_lambda(lmd,...) (lmd->func)(lmd,__VA_ARGS__)
 
 
@@ -32,20 +30,23 @@ int main(int argc, char **argv){
     //     return a+*b+c+d;
     // }
 
-    typedef int (*_lambda_func_wrap_type_)(struct _lambda_struct*lmd,int c, int d);
-    typedef int (*_lambda_func_inner_type_)(int c, int d,int a,int*b);
-    struct _lambda_struct {int a;int *b; _lambda_func_wrap_type_ func; _lambda_func_inner_type_ func_inner};
-    int _lambda_func_inner_(int c, int d,int a,int*b){body}
-    int _lambda_func_wrap_(struct _lambda_struct*lmd,int c, int d){
-        int a=lmd->a;int* b=lmd->b;
-        return (*lmd->func_inner)(c,d,a,b);
-    }
-    lambda_name=alloc(struct _lambda_struct);
-    lambda_name->a=a;lambda_name->b=b;
-    lambda_name->func=&_lambda_func_wrap;
-    lambda_name->func_inner=&_lambda_func_inner_;
+    // typedef int (*_lambda_func_wrap_type_)(struct _lambda_struct*lmd,int c, int d);
+    // typedef int (*_lambda_func_inner_type_)(int c, int d,int a,int*b);
+    // struct _lambda_struct {int a;int *b; _lambda_func_wrap_type_ func; _lambda_func_inner_type_ func_inner};
+    // int _lambda_func_inner_(int c, int d,int a,int*b){
+    //     *b=2;
+    //     return a+*b+c+d;
+    // }
+    // int _lambda_func_wrap_(struct _lambda_struct*lmd,int c, int d){
+    //     int a=lmd->a;int* b=lmd->b;
+        // return (*lmd->func_inner)(c,d,lmd->a,lmd->b);
+    // }
+    // lambda_name=alloc(struct _lambda_struct);
+    // lambda_name->a=a;lambda_name->b=b;
+    // lambda_name->func=&_lambda_func_wrap;
+    // lambda_name->func_inner=&_lambda_func_inner_;
 
-    (*lmd->func)(lmd,3,4);
+    // (*lmd->func)(lmd,3,4);
 
     // #define _make_lambda6(body,lambda_arg_list,lambda_arg_name_list,labmda_capture_list,lambda_capture_name_list,...) \
 
@@ -59,7 +60,7 @@ int main(int argc, char **argv){
 
     #define AS(...) __VA_ARGS__
     #define lambda_inner_assgin(var) typeof(var)var=lmd->var ; ;
-    #define lambda_inner_assgin2(a,b) typeof(a)a=lmd->a;typeof(b)b=lmd->b;
+    #define lambda_inner_assgin2(a,b) lmd->a,lmd->b
     #define lambda_assgin(lambda_name,var) lambda_name->var=var;
     #define lambda_assgin2(lambda_name,a,b) lambda_name->a=a;lambda_name->b=b;
     #define _concat_macro(a,b) a##b
@@ -74,8 +75,8 @@ int main(int argc, char **argv){
     #define _make_lambda_func_inner(body,return_type,inner_type_name, arg_list,capture_list) \
         return_type inner_type_name(arg_list,capture_list)body
     #define _make_lambda_func_wrap(return_type,wrap_type_name,struct_name,arg_list,arg_name_list,capture_name_list,inner_assgin) \
-        return_type wrap_type_name(struct struct_name*lmd,arg_list){inner_assgin \
-            return (*lmd->func_inner)(arg_name_list,capture_name_list);        } 
+        return_type wrap_type_name(struct struct_name*lmd,arg_list){ \
+            return (*lmd->func_inner)(arg_name_list,inner_assgin);         } 
     #define _make_lambda_assgin(lambda_name,struct_name,wrap_type_name,inner_type_name,assgin) \
         struct struct_name*lambda_name=alloc(struct struct_name);        assgin \
         lambda_name->func=&wrap_type_name;         lambda_name->func_inner=&inner_type_name;
@@ -85,13 +86,12 @@ int main(int argc, char **argv){
         _make_lambda_inner_type(CONCAT_M(_lambda_inner_type_,__LINE__),AS(arg_list),AS(capture_list)); \
         _make_lambda_struct(CONCAT_M(_lambda_struct_,__LINE__),CONCAT_M(_lambda_wrap_type_,__LINE__),CONCAT_M(_lambda_inner_type_,__LINE__),capture_var_list); \
         _make_lambda_func_inner(body,return_type,CONCAT_M(_lambda_func_inner_type_,__LINE__), AS(arg_list),AS(capture_list)) \
-        _make_lambda_func_wrap(return_type,CONCAT_M(_lambda_func_wrap_type_,__LINE__),CONCAT_M(_lambda_struct_,__LINE__),AS(arg_list),AS(arg_name_list),AS(capture_name_list),inner_assgin) \
+        _make_lambda_func_wrap(return_type,CONCAT_M(_lambda_func_wrap_type_,__LINE__),CONCAT_M(_lambda_struct_,__LINE__),AS(arg_list),AS(arg_name_list),AS(capture_name_list),AS(inner_assgin)) \
         _make_lambda_assgin(lambda_name,CONCAT_M(_lambda_struct_,__LINE__),CONCAT_M(_lambda_func_wrap_type_,__LINE__),CONCAT_M(_lambda_func_inner_type_,__LINE__),assgin)
 
 _make_lambda6(lmD,int,{
         *b=2;
         return a+*b+c+d;
-    },AS(int c,int d),AS(c,d),AS(int a,int *b),AS(a,b), AS(int a; int*b;),
-    lambda_inner_assgin2(a,b), lambda_assgin2(lmD,a,b));
+    },AS(int c,int d),AS(c,d),AS(int a,int *b),AS(a,b), AS(int a; int*b;),lambda_inner_assgin2(a,b), lambda_assgin2(lmD,a,b));
 printf("%d\n",do_lambda(lmD,3,4));
 }
