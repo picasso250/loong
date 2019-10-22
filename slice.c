@@ -11,22 +11,24 @@
 #define enlargeFactor 1.75
 
 static void _maybeEnlarge(slice *v, int elemSize);
-static slice *_makeslice_(array *a, char *typeStr, int len, int elemSize);
+static slice _makeslice_(array *a, char *typeStr, int len, int elemSize);
+static int _nextCapacity(int nowCapacity);
 
-array *_makearray_(char *typeStr, array *a, int len, int elemSize)
+array _makearray_(char *typeStr, array *arr, int len, int elemSize)
 {
-    a->elemSize = elemSize;
-    a->type = typeStr;
-    a->cap = len;
+    array a = *arr;
+    a.elemSize = elemSize;
+    a.type = typeStr;
+    a.cap = len;
     if (len > 0)
     {
-        a->base = calloc(len, elemSize);
-        checkMem(a->base);
+        a.base = calloc(len, elemSize);
+        checkMem(a.base);
     }
     return a;
 }
 
-slice *_makesliceCap(array *a, char *typeStr, int elemSize, int len, int cap)
+slice _makesliceCap(array a, char *typeStr, int elemSize, int len, int cap)
 {
     if (len < 0)
         error("len can not be negative");
@@ -34,8 +36,10 @@ slice *_makesliceCap(array *a, char *typeStr, int elemSize, int len, int cap)
         error("cap can not be negative");
     if (len < cap)
         error("len < cap %d < %d", len, cap);
-    P(a);
-    return _makeslice_(a, typeStr, len, elemSize);
+    array *arr = alloc(array);
+    *arr = a;
+    P(arr);
+    return _makeslice_(arr, typeStr, len, elemSize);
 }
 
 static void _setArrayCap(array *a, int newCap)
@@ -45,24 +49,17 @@ static void _setArrayCap(array *a, int newCap)
     a->cap = newCap;
 }
 
-slice *_sliceslicedefault(slice *v, int start, int end)
+slice _sliceslicedefault(slice *v, int start, int end)
 {
     if (start > end)
         error("slice start greater than end %d < %d", start, end);
-    slice *vec = alloc(slice);
-    P(vec);
-    vec->array = v->array;
-    vec->start = v->start + start * v->array->elemSize;
-    vec->len = end - start;
+    P(v->array);
+    slice vec;
+    _Zero(vec);
+    vec.array = v->array;
+    vec.start = v->start + start * v->array->elemSize;
+    vec.len = end - start;
     return vec;
-}
-slice *sliceCopy(slice *v)
-{
-    slice *vv = alloc(slice);
-    memcpy(vv, v, sizeof(slice));
-    vv->flag = 0;
-    P(vv);
-    return vv;
 }
 
 int _push(slice *v, void *p, int elemSize)
@@ -74,12 +71,8 @@ int _push(slice *v, void *p, int elemSize)
     return v->len;
 }
 
-static int _nextCapacity(int nowCapacity)
-{
-    return (int)((nowCapacity + enlargeIncrement) * enlargeFactor);
-}
 
-int _slicepop(slice *v, void *p, int elemSize)
+int _popdefault(slice *v, void *p, int elemSize)
 {
     if (v->len == 0)
         error("pop when length is 0");
@@ -94,7 +87,7 @@ void _sliceget_(slice *v, int i, void *p, int elemSize)
         error("index out of range");
     memcpy(v->start + i * elemSize, p, elemSize);
 }
-void _sliceSet(slice *v, int i, void *p, int elemSize)
+void _slicesetdefault(slice *v, int i, void *p, int elemSize)
 {
     if (i < 0)
         error("index negative");
@@ -102,6 +95,7 @@ void _sliceSet(slice *v, int i, void *p, int elemSize)
         error("index out of range");
     memcpy(p, v->start + i * elemSize, elemSize);
 }
+
 void _copy(slice *dst, int i, int j, slice *src, int k, int l, int size1, int size2)
 {
     if (size1 != size2)
@@ -162,17 +156,20 @@ _defSliceSlicePrim(bool);
 static void _maybeEnlarge(slice *v, int elemSize)
 {
     if (v->array->cap == 0)
-        _setArrayCap(v->array,_nextCapacity(0));
+        _setArrayCap(v->array, _nextCapacity(0));
     else if (v->start + v->len == v->array->base + v->array->cap)
-        _setArrayCap(v->array,_nextCapacity(v->array->cap));
+        _setArrayCap(v->array, _nextCapacity(v->array->cap));
 }
-static slice *_makeslice_(array *a, char *typeStr, int len, int elemSize)
+static slice _makeslice_(array *a, char *typeStr, int len, int elemSize)
 {
-    slice *v = alloc(slice);
-    v->start = a->base;
-    v->len = len;
+    slice v;
+    _Zero(v);
+    v.start = a->base;
+    v.len = len;
     // setCustomFlag(v, isPrimitive(typeStr));
-    v->start = a->base;
-    P(v);
     return v;
+}
+static int _nextCapacity(int nowCapacity)
+{
+    return (int)((nowCapacity + enlargeIncrement) * enlargeFactor);
 }

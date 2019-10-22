@@ -9,19 +9,19 @@
 
 typedef struct array
 {
-    GCFlag flag;
-    char *type;
-    int cap;
-    int elemSize;
-    char *base; // T[] not T*[]
+  GCFlag flag;
+  char *type;
+  int cap;
+  int elemSize;
+  char *base; // T[] not T*[]
 } array;
 // slice can be a value type, not a ref type
 typedef struct slice
 {
-    GCFlag flag;
-    array *array;
-    int len;
-    char *start;
+  GCFlag flag;
+  array *array;
+  int len;
+  char *start;
 } slice;
 
 /*
@@ -31,14 +31,13 @@ typedef struct slice
  */
 #define _sizeof(t) (isPrimitive(#t) ? sizeof(t) : sizeof(t *))
 
-#define _makearray(T, len) _makearray_(#T, alloc(array), len, sizeof(T))
+#define _makearray(T, len) _makearray_(#T, new (array), len, sizeof(T))
 
-#define _makeslice(t, len) _makesliceCap(makearray(t, cap), #t, _sizeof(t), len, cap)
+#define _makeslice(t, len) _makesliceCap(_makearray(t, len), #t, _sizeof(t), len, len)
 
 #define cap(v) ((v)->array->len)
 
-#define push(v, a) _push(v, a, sizeof(a),P(a))
-
+#define push(v, a) _push(v, &a, sizeof(a))
 #define pop(v) _Generic((v)->start[0],     \
                         int                \
                         : _popint(v),      \
@@ -57,9 +56,7 @@ typedef struct slice
                           byte             \
                         : _popbyte(v),     \
                           bool             \
-                        : _popbool(v),     \
-                          default          \
-                        : (typeof((v)->start[0]) _popdefault(v)))
+                        : _popbool(v))
 
 #define _getslice(v, i) _Generic((v)->start[0],                               \
                                  int                                          \
@@ -79,53 +76,29 @@ typedef struct slice
                                    byte                                       \
                                  : _getslicebyte(v, i, sizeof(byte)),         \
                                    bool                                       \
-                                 : _getslicebool(v, i, sizeof(bool)),         \
-                                   default                                    \
-                                 : (typeof((v)->start[0]) *)_getslicedefault(v, i, sizeof(char *)))
+                                 : _getslicebool(v, i, sizeof(bool)))
 
-#define _sliceset(v, i, a) _Generic(a,                                   \
-                                    int                                  \
-                                    : _slicesetprim(v, i, a, sizeof(a)), \
-                                      unsigned                           \
-                                    : _slicesetprim(v, i, a, sizeof(a)), \
-                                      short                              \
-                                    : _slicesetprim(v, i, a, sizeof(a)), \
-                                      long                               \
-                                    : _slicesetprim(v, i, a, sizeof(a)), \
-                                      float                              \
-                                    : _slicesetprim(v, i, a, sizeof(a)), \
-                                      double                             \
-                                    : _slicesetprim(v, i, a, sizeof(a)), \
-                                      char                               \
-                                    : _slicesetprim(v, i, a, sizeof(a)), \
-                                      byte                               \
-                                    : _slicesetprim(v, i, a, sizeof(a)), \
-                                      bool                               \
-                                    : _slicesetprim(v, i, a, sizeof(a)), \
-                                      default                            \
-                                    : _slicesetdefault(v, i, a, sizeof(a)))
+#define _sliceset(v, i, a) _slicesetdefault(v, i, &a, sizeof(a))
 
-#define sl(v, b, e) _Generic((v)->start[0],                  \
-                                      int                             \
-                                      : _slicesliceint(v, b, e),      \
-                                        unsigned                      \
-                                      : _slicesliceunsigned(v, b, e), \
-                                        short                         \
-                                      : _slicesliceshort(v, b, e),    \
-                                        long                          \
-                                      : _sliceslicelong(v, b, e),     \
-                                        float                         \
-                                      : _sliceslicefloat(v, b, e),    \
-                                        double                        \
-                                      : _sliceslicedouble(v, b, e),   \
-                                        char                          \
-                                      : _sliceslicechar(v, b, e),     \
-                                        byte                          \
-                                      : _sliceslicebyte(v, b, e),     \
-                                        bool                          \
-                                      : _sliceslicebool(v, b, e),     \
-                                        default                       \
-                                      : _sliceslicedefault((slice*)v, b, e))
+#define sl(v, b, e) _Generic((v).start[0],                   \
+                             int                             \
+                             : _slicesliceint(v, b, e),      \
+                               unsigned                      \
+                             : _slicesliceunsigned(v, b, e), \
+                               short                         \
+                             : _slicesliceshort(v, b, e),    \
+                               long                          \
+                             : _sliceslicelong(v, b, e),     \
+                               float                         \
+                             : _sliceslicefloat(v, b, e),    \
+                               double                        \
+                             : _sliceslicedouble(v, b, e),   \
+                               char                          \
+                             : _sliceslicechar(v, b, e),     \
+                               byte                          \
+                             : _sliceslicebyte(v, b, e),     \
+                               bool                          \
+                             : _sliceslicebool(v, b, e))
 
 #define copy(dst, i, j, src, k, l) _copy(dst, i, j, src, k, l, dst->array->elemSize, src->array->elemSize)
 
