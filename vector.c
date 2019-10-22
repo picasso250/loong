@@ -1,25 +1,48 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include "Vector.h"
+#include "vector.h"
+#include "hash.h"
+#include "type.h"
 #include "util.h"
 
 #define enlargeIncrement 4
 #define enlargeFactor 1.75
 
-Array *_makeArray(int len, int elemSize)
+// array *_makeArray_int(int len, int elemSize)
+// {
+//     return _makeArray(len, elemSize, 1);
+// }
+// array *_makeArray_float(int len, int elemSize)
+// {
+//     return _makeArray(len, elemSize, 1);
+// }
+// array *_makeArray_byte(int len, int elemSize)
+// {
+//     return _makeArray(len, elemSize, 1);
+// }
+// array *_makeArray_bool(int len, int elemSize)
+// {
+//     return _makeArray(len, elemSize, 1);
+// }
+
+// int i=arrayPop(a);
+
+array *_makeArray_(char *typeStr, void *arr, int len, int elemSize)
 {
-    Array *a = alloc(Array);
+    array *a = arr;
     a->elemSize = elemSize;
+    a->type = typeStr;
+    a->cap = len;
     if (len > 0)
     {
-        a->cap = len;
         a->base = calloc(len, elemSize);
+        checkMem(a->base);
     }
     return a;
 }
 
-Vector *_makeVectorCap(elemSize, len, cap)
+vector *_makeVectorCap(array *a, char *typeStr, int elemSize, int len, int cap)
 {
     if (len < 0)
         error("len can not be negative");
@@ -27,59 +50,59 @@ Vector *_makeVectorCap(elemSize, len, cap)
         error("cap can not be negative");
     if (len < cap)
         error("len < cap %d < %d", len, cap);
-    Array *a = _makeArray(cap, elemSize);
     P(a);
-    return _makeVector(a, len, elemSize);
+    return _makeVector(a, typeStr, len, elemSize);
 }
-Vector *_makeVector(Array *a, int len, int elemSize)
+vector *_makeVector(array *a, char *typeStr, int len, int elemSize)
 {
-    Vector *v = alloc(Vector);
-    v->base = a;
+    vector *v = alloc(vector);
+    v->start = a->base;
     v->len = len;
     v->elemSize = elemSize;
-    if (len > 0)
-    {
-        v->start = a->base;
-    }
+    v->type = a->type;
+    setCustomFlag(v, isPrimitive(typeStr));
+    v->start = a->base;
+    P(v);
     return v;
 }
 
-
-static void setArrayCap(Array *a, int newCap)
+static void setArrayCap(array *a, int newCap)
 {
     a->base = realloc(a->base, a->elemSize * newCap);
     checkMem(a->base);
     a->cap = newCap;
 }
 
-int lenVector(Vector *v)
+int lenVector(vector *v)
 {
     return v->len;
 }
-int cap(Vector *v)
+int cap(vector *v)
 {
     return v->array->cap;
 }
 
-Vector *vectorSlice(Vector *v, int start, int end)
+vector *vectorSlice(vector *v, int start, int end)
 {
     if (start > end)
         error("slice start greater than end %d < %d", start, end);
-    Vector *vec = alloc(Vector);
+    vector *vec = alloc(vector);
     P(vec);
     vec->array = v->array;
-    vec->start = v->start+start * v->elemSize;
+    vec->start = v->start + start * v->elemSize;
     vec->len = end - start;
     return vec;
 }
-Vector *VectorCopy(Vector *v)
+vector *VectorCopy(vector *v)
 {
-    Vector *vv = alloc(Vector);
-    memcpy(vv, v, sizeof(Vector));
+    vector *vv = alloc(vector);
+    memcpy(vv, v, sizeof(vector));
+    vv->flag = 0;
+    P(vv);
     return vv;
 }
 
-int _push(Vector *v, void *p, int elemSize)
+int _push(vector *v, void *p, int elemSize)
 {
     if (elemSize != v->elemSize)
         error("not same type, got %d, need %d", elemSize, v->elemSize);
@@ -91,7 +114,7 @@ static int nextCapacity(int nowCapacity)
 {
     return (int)((nowCapacity + enlargeIncrement) * enlargeFactor);
 }
-void maybeEnlarge(Vector *v, int elemSize)
+void maybeEnlarge(vector *v, int elemSize)
 {
     if (v->array->cap == 0)
         setArrayCap(nextCapacity(0));
@@ -99,15 +122,14 @@ void maybeEnlarge(Vector *v, int elemSize)
         setArrayCap(nextCapacity(v->array->cap));
 }
 
-
-int _pop(Vector *v, void *p, int elemSize)
+int _vectorpop(vector *v, void *p, int elemSize, int elemSizeT)
 {
     if (v->len == 0)
         error("pop when length is 0");
     memcpy(p, v->start + --v->len * elemSize, elemSize);
     return v->len;
 }
-void _VectorGet(Vector *v, int i, void *p, int elemSize)
+void _VectorGet(vector *v, int i, void *p, int elemSize)
 {
     if (i < 0)
         error("index negative");
@@ -115,11 +137,15 @@ void _VectorGet(Vector *v, int i, void *p, int elemSize)
         error("index out of range");
     memcpy(v->start + i * elemSize, p, elemSize);
 }
-void _VectorSet(Vector *v, int i, void *p, int elemSize)
+void _VectorSet(vector *v, int i, void *p, int elemSize)
 {
     if (i < 0)
         error("index negative");
     if (i >= v->len)
         error("index out of range");
     memcpy(p, v->start + i * elemSize, elemSize);
+}
+void vectorOnGc(Vector *v)
+{
+    free
 }
