@@ -23,117 +23,61 @@ typedef struct vector
     void *start;
 } vector;
 
-#define defArrayStructPri(t) \
-    typedef struct array##t  \
-    {                        \
-        GCFlag flag;         \
-        char *type;          \
-        int cap;             \
-        int elemSize;        \
-        ##t *base;           \
-    } array##t;
-#define defArrayStruct(t)   \
-    typedef struct array##t \
-    {                       \
-        GCFlag flag;        \
-        char *type;         \
-        int cap;            \
-        int elemSize;       \
-        ##t **base;         \
-    } array##t;
-#define defVectorStructPri(t) \
-    typedef struct vector##t  \
-    {                         \
-        GCFlag flag;          \
-        array##t *array;      \
-        int len;              \
-        ##t *start;           \
-    } vector##t
-#define defVectorStruct(t)   \
-    typedef struct vector##t \
-    {                        \
-        GCFlag flag;         \
-        array##t *array;     \
-        int len;             \
-        ##t **start;         \
-    } vector##t
-defArrayStructPri(int);
-defVectorStructPri(int);
+#define _sizeof(t) (isPrimitive(#t) ? sizeof(t) : sizeof(t *))
 
-// make(vector,int,)
-// makearray(int,0);
+#define _makearray(t, len) _makearray(#t, alloc(array), len, _sizeof(t))
 
-#define defSizeOf(t) \
-    int _sizeof##t() { return sizeof(##t *); }
-#define defSizeOfPri(t) \
-    int _sizeof##t() { return sizeof(##t); }
-#define defMakeArray(t)                                                          \
-    array##t *_makearray##t(char *typeStr, array##t *arr, int len, int elemSize) \
-    {                                                                            \
-        return (array##t *)_makeArray_(typeStr, arr, len, elemSize);             \
+#define _makevector(t, len) _makeVectorCap(makearray(t, cap), #t, _sizeof(t), len, cap)
+
+#define push(v, a) _push(v,a)
+
+#define _getvector(t, v, i) _vector##t(#t, v, i, a, _sizeof##t())
+#define defVectorGetPri(t)                                            \
+    t _vectorGet##t(char *typeStr, vector##t *v, int i, int elemSize) \
+    {                                                                 \
+        if (strcmp(typeStr, #t) != 0)                                 \
+            error("type error %d %d when vector get", typeStr, #t);   \
+        t a;                                                          \
+        _vectorGet(v, i, &a, elemSize);                               \
+        return a;                                                     \
     }
-defMakeArray(int)
-#define makearray(t, len) _makearray##t(#t, alloc(array##t), len, _sizeof##t())
-
-#define makevector(t, len) _makeVectorCap(makearray(t, cap), #t, _sizeof##t(), len, cap)
-
-#define defMakeVector(t)                                                                  \
-    vector##t *_makevector##t(array##t *a, char *typeStr, int elemSize, int len, int cap) \
-    {                                                                                     \
-        return (vector##t *)_makeVectorCap(a, typeStr, elemSize, len, cap);               \
+        defVectorGetPri(int)
+#define defVectorGet(t)                                                \
+    t *_vectorGet##t(char *typeStr, vector##t *v, int i, int elemSize) \
+    {                                                                  \
+        if (strcmp(typeStr, #t) != 0)                                  \
+            error("type error %d %d when vector get", typeStr, #t);    \
+        t *a;                                                          \
+        _vectorGet(v, i, &a, elemSize);                                \
+        P(a);                                                          \
+        return a;                                                      \
     }
-    defMakeVector(int)
 
-#define defVectorPush(t) \
-    void _push##t(vector##t *v, t *e) { _push(v, &e, _sizeof##t()); }
-
-#define defVectorPushPri(t) \
-    void _push##t(vector##t *v, t e) { _push(v, &e, _sizeof##t()); }
-        defVectorPushPri(int)
-#define push(v, a) _push##typeof(a)
-
-#define pop(v, a)               \
-    do                          \
-    {                           \
-        void *p = &(a);         \
-        _pop(v, p, sizeof(*p)); \
-    } while (0)
-#define _primitiveDef(t, ...) \
-    t:                        \
-    __VA_ARGS__
-#define primitiveDef(...) _primitiveDef(int, __VA_ARGS__),   \
-                          _primitiveDef(float, __VA_ARGS__), \
-                          _primitiveDef(bool, __VA_ARGS__),  \
-                          _primitiveDef(byte, __VA_ARGS__)
-#define VectorGet(v, i, a)               \
-    do                                   \
-    {                                    \
-        void *p = &(a);                  \
-        _VectorGet(v, i, p, sizeof(*p)); \
-    } while (0)
-#define VectorSet(v, i, a)                \
+#define vectorSet(v, i, a)                \
     do                                    \
     {                                     \
         void *p = &(a);                   \
         P(*p);                            \
-        _VectorSet_(v, i, p, sizeof(*p)); \
+        _vectorSet_(v, i, p, sizeof(*p)); \
     } while (0)
-#define _VectorSet_(v, i, a, p) _Generic(a, primitiveDef(_VectorSet(v, i, p, sizeof(a))), \
+#define _vectorSet_(v, i, a, p) _Generic(a, primitiveDef(_vectorSet(v, i, p, sizeof(a))), \
                                          default                                          \
-                                         : _VectorSet(v, i, a, P(*p)))
+                                         : _vectorSet(v, i, a, P(*p)))
             int lenVector(vector *v);
 int cap(vector *v);
 vector *VectorCopy(vector *v);
 vector *VectorSlice(vector *v, int start, int end);
 
-#define pop(a) _vectorpop##typeof(a)(_vector##typeof(a) a), sizeof(a->base[0]))
+#define pop(t, v) _vectorpop##t(#t, v, sizeof(v->base[0]), sizeof(t))
 
-#define defVectorPop(t)                             \
-    typedef int int_;##t _vectorpop##t(vector##t v, int elemSize) \
-    {                                               \
-        ##t aa;                                     \
-        _vectorpop(v, &aa, elemSize);               \
-        return aa;                                  \
+#define defVectorPop(t)                                                       \
+    t _vectorpop##t(char *typeStr, vector##t *v, int elemSize, int elemSizeT) \
+    {                                                                         \
+        if (strcmp(typeStr, #t) != 0)                                         \
+            error("type error %d %d when pop", typeStr, #t);                  \
+        t aa;                                                                 \
+        _vectorpop((vector *)v, &aa, elemSize, elemSizeT);                    \
+        return aa;                                                            \
     }
 defVectorPop(int)
 #endif
