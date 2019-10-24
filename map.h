@@ -2,6 +2,7 @@
 #define _MAP_H_ 1
 
 #include "util.h"
+#include "gc.h"
 #include "hash.h"
 
 static int primeFactorList[] = {
@@ -9,6 +10,8 @@ static int primeFactorList[] = {
 
 typedef struct map
 {
+    GCFlag flag;
+    const char *type;
     int len;
     unsigned factor;
     struct mapentry *first;
@@ -22,13 +25,29 @@ typedef struct mapentry
 } mapentry;
 
 #define MAP_INIT_FACTOR 2U
-#define initmap(t) _mapMake(m, #t, sizeof(t), MAP_INIT_FACTOR)
+map *_mapMake(map *m, const char *typeStr, int elemSize, int factor);
+#define initmap(m,t) _mapMake(m, #t, sizeof(t), MAP_INIT_FACTOR)
 #define newmap(t) _mapMake(alloc(map), #t, sizeof(t), MAP_INIT_FACTOR)
 
-void *_mapGet(map *m, char *key, char*type, int elemSize);
-#define _getmap(m, key, T) (*(T *)_mapGet(m, key, #T, sizeof(T)))
+void *_mapGet(map *m, char *key, char *type, int elemSize);
+#define _getmap(m, key, T) (*(T *)_mapGet(m, (char*)key, #T, sizeof(T)))
 void *_mapSet(map *m, char *key, char *type, int elemSize);
-#define _setmap(m, key, T, value) (*(T *)_mapSet(m, key, #T, sizeof(value)) = value)
+#define _setmap(m, key, T, value) (*(T *)_mapSet(m, (char*)key, #T, sizeof(value)) = value)
+int _mapDel(map *m, char *key);
 #define del(m, key) _mapDel(m, key)
+
+#define formap(m, k, T, v)                     \
+    {                                          \
+        for (int _i = 0; _i < m->factor; _i++) \
+        {                                      \
+            mapentry *_pme_ = m->base[_i];        \
+            for (; _pme_; _pme_ = _pme_->next)          \
+            {                                  \
+                char *k = _pme_->key;             \
+                T v = *(T *)_pme_->value;
+#define endformap \
+    }             \
+    }             \
+    }
 
 #endif
