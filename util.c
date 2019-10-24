@@ -12,3 +12,8 @@ void *_alloc_and_zero(int size, char *file, int line, char *t)
 
     return memset(p, 0, size);
 }
+int _error_abort()
+{
+  abort();
+  return 0;
+}

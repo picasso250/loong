@@ -5,6 +5,13 @@
 #include <stdio.h>
 #include <string.h>
 
+// level
+// 0 util
+// 1 type
+// 2 gc
+// 3 slice map
+// 4 buildin
+
 #define format_identifier(v) _Generic(v,        \
                                       char *    \
                                       : "%s",   \
@@ -59,16 +66,25 @@
         }                                                                                        \
     } while (0)
 
+int _error_abort();
+#define error(...)                                                        \
+    (fprintf(stderr, "%s:%d: %s() ", __FILE__, __LINE__, __func__) + 1 && \
+     (fprintf(stderr, __VA_ARGS__) + 1) &&                                \
+     fprintf(stderr, "\n") + 1 &&                                         \
+     _error_abort())
+
 #define alloc(T) ((T *)_alloc_and_zero(sizeof(T), __FILE__, __LINE__, #T))
 
 void *_alloc_and_zero(int size, char *file, int line, char *t);
-#define new(T) ((T *)_alloc_and_zero(sizeof(T), __FILE__, __LINE__, #T))
+#define new (T)((T *)_alloc_and_zero(sizeof(T), __FILE__, __LINE__, #T))
 
 // z for pointer, Z for struct
 #define _zero(p) memset(p, 0, sizeof(*(p)))
-#define _Zero(a) memset(&(a),0,sizeof(a))
+#define _Zero(a) memset(&(a), 0, sizeof(a))
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
+
+int nullMemory[100]; // big enough to hold all kind struct
 
 #endif
