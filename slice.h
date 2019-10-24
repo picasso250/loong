@@ -3,24 +3,7 @@
 
 #include "util.h"
 #include "gc.h"
-// #include "type.h"
-
-typedef struct array
-{
-  GCFlag flag;
-  char *type; // should be compile time checked
-  int cap;
-  int elemSize;
-  char *base; // T[] not T*[]
-} array;
-// slice can be a value type, not a ref type
-typedef struct slice
-{
-  GCFlag flag;
-  array *array;
-  int len;
-  char *start;
-} slice;
+#include "type.h"
 
 /*
  * types are checked dynamically
@@ -45,14 +28,19 @@ int _pop(slice *v, void *p, int elemSize);
 #define pop(v, a) _pop((v), &(a), sizeof(a))
 
 void *_sliceget_(slice *v, int i, int elemSize);
-#define _getslice(v, i, T) (*(T *)_sliceget_(v, i,  sizeof(T)))
+#define _getslice(v, i, T) (*(T *)_sliceget_(v, (int)i, sizeof(T)))
 void *_setslice_(char *type, slice *v, int i, int elemSize);
 #define _setslice(v, i, T, a) \
-  (*(T *)_setslice_(#T, (v), i, sizeof(a)) = a)
+  (*(T *)_setslice_(#T, (v), (int)i, sizeof(a)) = a)
 
 slice sl(slice *v, int start, int end);
 slice *slp(slice *v, int start, int end);
 
 #define copy(dst, i, j, src, k, l) _copy(dst, i, j, src, k, l, dst->array->elemSize, src->array->elemSize)
 
+#define forslice(s, i, T, v)       \
+  for (int i = 0; i < s->len; i++) \
+  {                                \
+    T v = *((T *)s->start + i);
+#define endforslcie }
 #endif

@@ -17,3 +17,9 @@ int _error_abort()
   abort();
   return 0;
 }
+
+void Free(void **pp)
+{
+    free(*pp);
+    *pp = NULL;
+}

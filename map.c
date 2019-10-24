@@ -14,6 +14,7 @@ map *_mapMake(map *m, const char *typeStr, int elemSize, int factor)
         error("not enough space for primitive type");
     _zero(m);
     m->type = typeStr;
+    m->elemSize = elemSize;
     m->factor = factor;
     m->base = (mapentry **)calloc(factor, sizeof(mapentry *));
     checkMem(m->base);
@@ -69,13 +70,13 @@ static void _mapEnlarge(map *m, int newFactor)
     checkMem(tmp);
     int i = 0;
     formap(m, k, int, _)
-    // for (int _i_ = 0; _i_ < m->factor; _i_++)
-    // {
-    //     for (mapentry *_pme_ = m->base[_i_]; _pme_; _pme_ = _pme_->next)
-    //     {
-    //         char *k = _pme_->key;
-    //         int _ = *(int *)_pme_->value;
-            tmp[i++] = _pme_;
+        // for (int _i_ = 0; _i_ < m->factor; _i_++)
+        // {
+        //     for (mapentry *_pme_ = m->base[_i_]; _pme_; _pme_ = _pme_->next)
+        //     {
+        //         char *k = _pme_->key;
+        //         int _ = *(int *)_pme_->value;
+        tmp[i++] = _pme_;
     //     }
     // }
     endformap;
@@ -150,13 +151,15 @@ void *_mapSet(map *m, char *key, char *type, int elemSize)
     }
     return m->base[index]->value;
 }
-static void _mapentryFree(mapentry *e)
+static void _mapentryFree(mapentry *e,int elemSize)
 {
     if (e == NULL)
         error("free null mapentry");
     if (e->value == NULL)
         error("free null mapentry value");
+    memset(e->value,0,elemSize);
     free(e->value);
+    e->value=NULL;
     free(e);
 }
 int _mapDel(map *m, char *key)
@@ -182,7 +185,7 @@ int _mapDel(map *m, char *key)
                 prev->next = ep->next;
             }
             m->len--;
-            _mapentryFree(ep);
+            _mapentryFree(ep,m->elemSize);
             return 1;
         }
         prev = ep;
@@ -192,7 +195,7 @@ int _mapDel(map *m, char *key)
 }
 void _mapGraph(map *m, char *fmt)
 {
-    printf("Map %X\n",m);
+    printf("Map %X\n", m);
     for (int _i_ = 0; _i_ < m->factor; _i_++)
     {
         printf("\t%s", m->base[_i_] ? "-:> " : "NULL");
@@ -203,5 +206,24 @@ void _mapGraph(map *m, char *fmt)
             printf("(%s->%d) -> ", k, v);
         }
         printf("\n");
+    }
+}
+map *mapfinal(map *m)
+{
+    if (m)
+    {
+        for (int i = 0; i < m->factor; i++)
+        {
+            mapentry *p = m->base[i];
+            while (p)
+            {
+                mapentry *pp = p->next;
+                p->next =NULL;
+                _mapentryFree(p,m->elemSize);
+                p = pp;
+            }
+        }
+        free(m->base);
+        m->base = NULL;
     }
 }

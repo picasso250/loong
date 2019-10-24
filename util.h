@@ -74,9 +74,7 @@ int _error_abort();
      _error_abort())
 
 #define alloc(T) ((T *)_alloc_and_zero(sizeof(T), __FILE__, __LINE__, #T))
-
 void *_alloc_and_zero(int size, char *file, int line, char *t);
-#define new (T)((T *)_alloc_and_zero(sizeof(T), __FILE__, __LINE__, #T))
 
 // z for pointer, Z for struct
 #define _zero(p) memset(p, 0, sizeof(*(p)))

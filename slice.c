@@ -39,7 +39,7 @@ slice *_initslice(slice *v, char *typeStr, int elemSize, int len, int cap)
     _zero(v);
     v->array = _initarray(alloc(array), typeStr, len, elemSize);
     P(v->array);
-    v->start = v->array->base;
+    v->offset = 0;
     v->len = len;
     // setCustomFlag(v, isPrimitive(typeStr));
     return v;
@@ -53,7 +53,7 @@ void *_push(char *type, slice *v, int elemSize)
     if (elemSize != v->array->elemSize)
         error("not same type, got %d, need %d", elemSize, v->array->elemSize);
     _maybeEnlarge(v, elemSize);
-    return v->start + v->len++ * elemSize;
+    return v->array->base + (v->offset + v->len++) * elemSize;
 }
 
 static void _setArrayCap(array *a, int newCap)
@@ -65,11 +65,13 @@ static void _setArrayCap(array *a, int newCap)
 
 static slice *_sl(slice *vec, slice *v, int start, int end)
 {
+    if (start < 0)
+        error("start can not be negative");
     if (start > end)
         error("slice start greater than end %d < %d", start, end);
-    P(v->array);
     vec->array = v->array;
-    vec->start = v->start + start * v->array->elemSize;
+    P(v->array);
+    vec->offset = v->offset + start;
     vec->len = end - start;
     return vec;
 }
@@ -90,10 +92,10 @@ int _pop(slice *v, void *p, int elemSize)
     if (v->len == 0)
         error("pop when length is 0");
     v->len--;
-    memcpy(p, v->start + v->len * elemSize, elemSize);
+    memcpy(p, v->array->base + (v->offset + v->len) * elemSize, elemSize);
     return v->len;
 }
-void* _sliceget_(slice *v, int i, int elemSize)
+void *_sliceget_(slice *v, int i, int elemSize)
 {
     if (i < 0)
         error("index negative");
@@ -101,7 +103,7 @@ void* _sliceget_(slice *v, int i, int elemSize)
         error("index out of range");
     if (elemSize != v->array->elemSize)
         error("elemSize %d assign to %d", v->array->elemSize, elemSize);
-    return v->start + i * elemSize;
+    return v->array->base + (v->offset + i) * elemSize;
 }
 void *_setslice_(char *type, slice *v, int i, int elemSize)
 {
@@ -111,10 +113,10 @@ void *_setslice_(char *type, slice *v, int i, int elemSize)
         error("index negative");
     if (i >= v->len)
         error("index out of range");
-    return v->start + i * elemSize;
+    return v->array->base + (v->offset + i) * elemSize;
 }
 
-void _copy(slice *dst, int i, int j, slice *src, int k, int l, int size1, int size2)
+void _copy(slice *dst, int i, int ii, slice *src, int k, int kk, int size1, int size2)
 {
     if (size1 != size2)
         error("size not equal %d!=%d when copy", size1, size2);
@@ -124,31 +126,54 @@ void _copy(slice *dst, int i, int j, slice *src, int k, int l, int size1, int si
         error("dst is NULL");
     if (src == NULL)
         error("src is NULL");
-    if (i > j)
+    if (i > ii)
         error("index not possible");
-    if (k > l)
+    if (k > kk)
         error("index not possible");
-    if (i == j || k == l)
+    if (i == ii || k == kk)
         return;
-    int d1 = j - i;
-    int d2 = l - k;
+    int d1 = ii - i;
+    int d2 = kk - k;
     int d = min(d1, d2);
-    memmove(dst->start + i * size1, src->start + k * size2, size1 * d);
+    char *ds = dst->array->base + (dst->offset + i) * size1;
+    char *sr = src->array->base + (src->offset + k) * size2;
+    memmove(ds, sr, size1 * d);
 }
-void sliceOnGc(slice *v)
+
+array *arrayfinal(array *a)
 {
-    // free
+    if (a)
+    {
+        if (a->base )
+        {
+            free(a->base);
+        }
+        a->base = NULL;
+    }
+    return a;
 }
+slice *slicefinal(slice *s)
+{
+    if (s)
+    {
+        if (s->array == NULL)
+            error("s->array is NULL");
+        V(s->array);
+    }
+    return s;
+}
+
 // ==== private ====
 static void _maybeEnlarge(slice *v, int elemSize)
 {
     if (v->array->cap == 0)
     {
         _setArrayCap(v->array, _nextCapacity(0));
-        v->start = v->array->base;
     }
-    else if (v->start + v->len * elemSize == v->array->base + v->array->cap * elemSize)
+    else if (v->offset + v->len  ==  v->array->cap )
+    {
         _setArrayCap(v->array, _nextCapacity(v->array->cap));
+    }
 }
 
 static int _nextCapacity(int nowCapacity)

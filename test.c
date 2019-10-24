@@ -1,15 +1,13 @@
 #include <stdio.h>
 
-#include "util.h"
 #include "test.h"
 
-#include "slice.h"
-#include "slice_test.c"
-#include "map_test.c"
+#include "buildin.h"
+
+#include ".test_decl.h"
 
 int main(int argc, char *argv[])
 {
-    testSlice();
-    testMap();
+    #include ".test_exec.c"
     printf("OK.\n");
 }
