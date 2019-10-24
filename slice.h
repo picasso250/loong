@@ -32,6 +32,7 @@ array *_initarray(array *arr, char *typeStr, int len, int elemSize);
 #define initarray(a, T, len) _initarray(a, #T, len, sizeof(T))
 #define newarray(T, len) _initarray(alloc(array), #T, len, sizeof(T))
 
+slice *_initslice(slice *v, char *typeStr, int elemSize, int len, int cap);
 #define initslice(v, T, len, cap) _initslice(v, #T, sizeof(T), len, cap)
 #define newslice(T, len, cap) _initslice(alloc(slice), #T, sizeof(T), len, len)
 
@@ -43,10 +44,10 @@ void *_push(char *type, slice *v, int elemSize);
 int _pop(slice *v, void *p, int elemSize);
 #define pop(v, a) _pop((v), &(a), sizeof(a))
 
-void _sliceget_(slice *v, int i, void *p, int elemSize);
-#define _getslice(v, i, a) _sliceget_(v, i, &a, sizeof(a))
+void *_sliceget_(slice *v, int i, int elemSize);
+#define _getslice(v, i, T) (*(T *)_sliceget_(v, i,  sizeof(T)))
 void *_setslice_(char *type, slice *v, int i, int elemSize);
-#define _setslice(v, T, i, a) \
+#define _setslice(v, i, T, a) \
   (*(T *)_setslice_(#T, (v), i, sizeof(a)) = a)
 
 slice sl(slice *v, int start, int end);

@@ -93,7 +93,7 @@ int _pop(slice *v, void *p, int elemSize)
     memcpy(p, v->start + v->len * elemSize, elemSize);
     return v->len;
 }
-void _sliceget_(slice *v, int i, void *p, int elemSize)
+void* _sliceget_(slice *v, int i, int elemSize)
 {
     if (i < 0)
         error("index negative");
@@ -101,7 +101,7 @@ void _sliceget_(slice *v, int i, void *p, int elemSize)
         error("index out of range");
     if (elemSize != v->array->elemSize)
         error("elemSize %d assign to %d", v->array->elemSize, elemSize);
-    memcpy(p, v->start + i * elemSize, elemSize);
+    return v->start + i * elemSize;
 }
 void *_setslice_(char *type, slice *v, int i, int elemSize)
 {
