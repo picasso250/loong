@@ -66,9 +66,18 @@ static void _mapEnlarge(map *m, int newFactor)
 {
 
     mapentry **tmp = calloc(m->len, sizeof(mapentry *));
+    checkMem(tmp);
     int i = 0;
-    formap(m, k, char, _)
-        tmp[i++] = _pme_;
+    formap(m, k, int, _)
+    // for (int _i_ = 0; _i_ < m->factor; _i_++)
+    // {
+    //     for (mapentry *_pme_ = m->base[_i_]; _pme_; _pme_ = _pme_->next)
+    //     {
+    //         char *k = _pme_->key;
+    //         int _ = *(int *)_pme_->value;
+            tmp[i++] = _pme_;
+    //     }
+    // }
     endformap;
 
     m->factor = newFactor;
@@ -116,11 +125,13 @@ void *_mapSet(map *m, char *key, char *type, int elemSize)
     if (m->first == NULL)
     {
         m->first = m->base[index] = _newMapEntry(key, elemSize, NULL);
+        m->len++;
         return m->base[index]->value;
     }
     if (m->base[index] == NULL)
     {
         m->base[index] = _newMapEntry(key, elemSize, NULL);
+        m->len++;
     }
     else
     {
@@ -135,6 +146,7 @@ void *_mapSet(map *m, char *key, char *type, int elemSize)
         }
         // not found, insert to head
         m->base[index] = _newMapEntry(key, elemSize, m->base[index]);
+        m->len++;
     }
     return m->base[index]->value;
 }
@@ -169,6 +181,7 @@ int _mapDel(map *m, char *key)
             {
                 prev->next = ep->next;
             }
+            m->len--;
             _mapentryFree(ep);
             return 1;
         }
@@ -176,4 +189,19 @@ int _mapDel(map *m, char *key)
         ep = ep->next;
     }
     return 0;
+}
+void _mapGraph(map *m, char *fmt)
+{
+    printf("Map %X\n",m);
+    for (int _i_ = 0; _i_ < m->factor; _i_++)
+    {
+        printf("\t%s", m->base[_i_] ? "-:> " : "NULL");
+        for (mapentry *_pme_ = m->base[_i_]; _pme_; _pme_ = _pme_->next)
+        {
+            char *k = _pme_->key;
+            int v = *(int *)_pme_->value;
+            printf("(%s->%d) -> ", k, v);
+        }
+        printf("\n");
+    }
 }

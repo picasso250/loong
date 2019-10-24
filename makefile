@@ -27,9 +27,9 @@ macro.o: macro.c util.h
 
 test: test.o gc.o util.o buildin.o slice.o type.o map.o hash.o
 	$(CC) -o test test.o gc.o util.o buildin.o slice.o map.o hash.o
-	./test
+	rem # ./test
 
-test.o: test.c test.h gc.h util.h buildin.h slice.h map.h type.h
+test.o: test.c test.h gc.h util.h buildin.h slice.h map.h type.h *test*.c
 	$(CC) --std=c11 -ggdb -c test.c
 
 slice.o: slice.c slice.h type.h gc.h util.h buildin.h

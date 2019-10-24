@@ -26,28 +26,28 @@ typedef struct mapentry
 
 #define MAP_INIT_FACTOR 2U
 map *_mapMake(map *m, const char *typeStr, int elemSize, int factor);
-#define initmap(m,t) _mapMake(m, #t, sizeof(t), MAP_INIT_FACTOR)
+#define initmap(m, t) _mapMake(m, #t, sizeof(t), MAP_INIT_FACTOR)
 #define newmap(t) _mapMake(alloc(map), #t, sizeof(t), MAP_INIT_FACTOR)
 
 void *_mapGet(map *m, char *key, char *type, int elemSize);
-#define _getmap(m, key, T) (*(T *)_mapGet(m, (char*)key, #T, sizeof(T)))
+#define _getmap(m, key, T) (*(T *)_mapGet(m, (char *)key, #T, sizeof(T)))
 void *_mapSet(map *m, char *key, char *type, int elemSize);
-#define _setmap(m, key, T, value) (*(T *)_mapSet(m, (char*)key, #T, sizeof(value)) = value)
+#define _setmap(m, key, T, value) (*(T *)_mapSet(m, (char *)key, #T, sizeof(value)) = value)
 int _mapDel(map *m, char *key);
 #define del(m, key) _mapDel(m, key)
 
-#define formap(m, k, T, v)                     \
-    {                                          \
-        for (int _i = 0; _i < m->factor; _i++) \
-        {                                      \
-            mapentry *_pme_ = m->base[_i];        \
-            for (; _pme_; _pme_ = _pme_->next)          \
-            {                                  \
-                char *k = _pme_->key;             \
-                T v = *(T *)_pme_->value;
+#define formap(m, k, T, v)                                               \
+    for (int _i_ = 0; _i_ < m->factor; _i_++)                            \
+    {                                                                    \
+        for (mapentry *_pme_ = m->base[_i_]; _pme_; _pme_ = _pme_->next) \
+        {                                                                \
+            char *k = _pme_->key;                                        \
+            T v = *(T *)_pme_->value;
 #define endformap \
     }             \
-    }             \
     }
+
+// for debug
+void _mapGraph(map *m, char *fmt);
 
 #endif
