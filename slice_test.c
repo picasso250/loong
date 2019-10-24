@@ -8,19 +8,19 @@ void testSlice()
     slice a ;
     initslice(&a,int, 0,0);
     push(&a, int, 42);
-    int d = len(a);
+    int d = len(&a);
     testEqual(d, 1);
     push(&a, int, 43);
     int b;
     pop(&a, b);
     testEqual(b, 43);
     int c;
-    get(&a, 0, c);
+    c=get(&a, 0, int);
     testEqual(c, 42);
-    set(&a, int, 0, 55);
+    set(&a,  0,int, 55);
     testEqual(*(int *)a.array->base, 55);
     int f;
-    get(&a, 0, f);
+    f=get(&a, 0, int);
     testEqual(f, 55);
     int cc=cap(&a);
     testEqual(cc, 7);
@@ -35,6 +35,6 @@ void testSlice()
     testEqual(cap(&a), 19);
     slice e = sl(&a, 1, 3);
     int g;
-    get(&e, 0, g);
+    g=get(&e, 0, int);
     testEqual(g, 11);
 }
