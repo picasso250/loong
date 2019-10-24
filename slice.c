@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "slice.h"
-#include "hash.h"
+// #include "hash.h"
 #include "type.h"
 #include "util.h"
 #include "gc.h"
@@ -11,24 +11,23 @@
 #define enlargeFactor 1.75
 
 static void _maybeEnlarge(slice *v, int elemSize);
-static slice _makeslice_(array *a, char *typeStr, int len, int elemSize);
 static int _nextCapacity(int nowCapacity);
 
-array _makearray_(char *typeStr, array *arr, int len, int elemSize)
+array *_initarray(array *arr, char *typeStr, int len, int elemSize)
 {
-    array a = *arr;
-    a.elemSize = elemSize;
-    a.type = typeStr;
-    a.cap = len;
+    _zero(arr);
+    arr->elemSize = elemSize;
+    arr->type = typeStr;
+    arr->cap = len;
     if (len > 0)
     {
-        a.base = calloc(len, elemSize);
-        checkMem(a.base);
+        arr->base = calloc(len, elemSize);
+        checkMem(arr->base);
     }
-    return a;
+    return arr;
 }
 
-slice _makesliceCap(array a, char *typeStr, int elemSize, int len, int cap)
+slice *_initslice(slice *v, char *typeStr, int elemSize, int len, int cap)
 {
     if (len < 0)
         error("len can not be negative");
@@ -36,10 +35,25 @@ slice _makesliceCap(array a, char *typeStr, int elemSize, int len, int cap)
         error("cap can not be negative");
     if (len < cap)
         error("len < cap %d < %d", len, cap);
-    array *arr = alloc(array);
-    *arr = a;
-    P(arr);
-    return _makeslice_(arr, typeStr, len, elemSize);
+
+    _zero(v);
+    v->array = _initarray(alloc(array), typeStr, len, elemSize);
+    P(v->array);
+    v->start = v->array->base;
+    v->len = len;
+    // setCustomFlag(v, isPrimitive(typeStr));
+    return v;
+}
+
+// return to be inserted
+void *_push(char *type, slice *v, int elemSize)
+{
+    if (strcmp(type, v->array->type) != 0)
+        error("not same type %s %s", type, v->array->type);
+    if (elemSize != v->array->elemSize)
+        error("not same type, got %d, need %d", elemSize, v->array->elemSize);
+    _maybeEnlarge(v, elemSize);
+    return v->start + v->len++ * elemSize;
 }
 
 static void _setArrayCap(array *a, int newCap)
@@ -49,34 +63,34 @@ static void _setArrayCap(array *a, int newCap)
     a->cap = newCap;
 }
 
-slice _sliceslicedefault(slice *v, int start, int end)
+static slice *_sl(slice *vec, slice *v, int start, int end)
 {
     if (start > end)
         error("slice start greater than end %d < %d", start, end);
     P(v->array);
-    slice vec;
-    _Zero(vec);
-    vec.array = v->array;
-    vec.start = v->start + start * v->array->elemSize;
-    vec.len = end - start;
+    vec->array = v->array;
+    vec->start = v->start + start * v->array->elemSize;
+    vec->len = end - start;
     return vec;
 }
-
-int _push(slice *v, void *p, int elemSize)
+slice sl(slice *v, int start, int end)
 {
-    if (elemSize != v->array->elemSize)
-        error("not same type, got %d, need %d", elemSize, v->array->elemSize);
-    _maybeEnlarge(v, elemSize);
-    memcpy(v->start + v->len++ * elemSize, p, elemSize);
-    return v->len;
+    slice vec;
+    _Zero(vec);
+    return *_sl(&vec, v, start, end);
+}
+slice *slp(slice *v, int start, int end)
+{
+    slice *vec = alloc(slice);
+    return _sl(vec, v, start, end);
 }
 
-
-int _popdefault(slice *v, void *p, int elemSize)
+int _pop(slice *v, void *p, int elemSize)
 {
     if (v->len == 0)
         error("pop when length is 0");
-    memcpy(p, v->start + --v->len * elemSize, elemSize);
+    v->len--;
+    memcpy(p, v->start + v->len * elemSize, elemSize);
     return v->len;
 }
 void _sliceget_(slice *v, int i, void *p, int elemSize)
@@ -85,15 +99,19 @@ void _sliceget_(slice *v, int i, void *p, int elemSize)
         error("index negative");
     if (i >= v->len)
         error("index out of range");
-    memcpy(v->start + i * elemSize, p, elemSize);
+    if (elemSize != v->array->elemSize)
+        error("elemSize %d assign to %d", v->array->elemSize, elemSize);
+    memcpy(p, v->start + i * elemSize, elemSize);
 }
-void _slicesetdefault(slice *v, int i, void *p, int elemSize)
+void *_setslice_(char *type, slice *v, int i, int elemSize)
 {
+    if (strcmp(type, v->array->type) != 0)
+        error("not same type %s %s", type, v->array->type);
     if (i < 0)
         error("index negative");
     if (i >= v->len)
         error("index out of range");
-    memcpy(p, v->start + i * elemSize, elemSize);
+    return v->start + i * elemSize;
 }
 
 void _copy(slice *dst, int i, int j, slice *src, int k, int l, int size1, int size2)
@@ -121,54 +139,18 @@ void sliceOnGc(slice *v)
 {
     // free
 }
-
-_defsliceGet(int);
-_defsliceGet(unsigned);
-_defsliceGet(short);
-_defsliceGet(long);
-_defsliceGet(float);
-_defsliceGet(double);
-_defsliceGet(char);
-_defsliceGet(byte);
-_defsliceGet(bool);
-
-_defslicePop(int);
-_defslicePop(unsigned);
-_defslicePop(short);
-_defslicePop(long);
-_defslicePop(float);
-_defslicePop(double);
-_defslicePop(char);
-_defslicePop(byte);
-_defslicePop(bool);
-
-_defSliceSlicePrim(int);
-_defSliceSlicePrim(unsigned);
-_defSliceSlicePrim(short);
-_defSliceSlicePrim(long);
-_defSliceSlicePrim(float);
-_defSliceSlicePrim(double);
-_defSliceSlicePrim(char);
-_defSliceSlicePrim(byte);
-_defSliceSlicePrim(bool);
-
 // ==== private ====
 static void _maybeEnlarge(slice *v, int elemSize)
 {
     if (v->array->cap == 0)
+    {
         _setArrayCap(v->array, _nextCapacity(0));
-    else if (v->start + v->len == v->array->base + v->array->cap)
+        v->start = v->array->base;
+    }
+    else if (v->start + v->len * elemSize == v->array->base + v->array->cap * elemSize)
         _setArrayCap(v->array, _nextCapacity(v->array->cap));
 }
-static slice _makeslice_(array *a, char *typeStr, int len, int elemSize)
-{
-    slice v;
-    _Zero(v);
-    v.start = a->base;
-    v.len = len;
-    // setCustomFlag(v, isPrimitive(typeStr));
-    return v;
-}
+
 static int _nextCapacity(int nowCapacity)
 {
     return (int)((nowCapacity + enlargeIncrement) * enlargeFactor);
