@@ -12,7 +12,7 @@ void testSlice()
     testEqual(d, 1);
     push(&a, int, 43);
     int b;
-    pop(&a, b);
+    pop(&a, int,b);
     testEqual(b, 43);
     int c;
     c = get(&a, 0, int);
