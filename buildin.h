@@ -9,15 +9,21 @@
 
 #define make(t, ...) make##t(__VA_ARGS__)
 
-#define get(c, ...) _Generic(c,                                    \
-                             slice *                               \
-                             : _getslice((slice *)c, __VA_ARGS__), \
-                               map *                               \
-                             : _getmap((map *)c, __VA_ARGS__))
-#define set(c, ...) _Generic(c,                                    \
-                             slice *                               \
-                             : _setslice((slice *)c, __VA_ARGS__), \
-                               map *                               \
-                             : _setmap((map *)c, __VA_ARGS__))
+// c, i, T
+#define get(c, i, T) _Generic(c,                                  \
+                              array *                             \
+                              : _getarray((array *)c, (int)i, T), \
+                                slice *                           \
+                              : _getslice((slice *)c, (int)i, T), \
+                                map *                             \
+                              : _getmap((map *)c, (char *)i, T))
+// c, i, T, e
+#define set(c, i, T, e) _Generic(c,                                     \
+                                 array *                                \
+                                 : _setarray((array *)c, (int)i, T, e), \
+                                   slice *                              \
+                                 : _setslice((slice *)c, (int)i, T, e), \
+                                   map *                                \
+                                 : _setmap((map *)c, (char *)i, T, e))
 
 #endif
