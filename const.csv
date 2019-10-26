@@ -1,0 +1,15 @@
+,stmt,val,expr
+output,,,
+input,,,
+define,,,
+if,,,
+loop,,,
+expr,,,
+,,int,int
+,,str,str
+,,array,
+,,slice,slice
+,,map,map
+,,pair,pair
+,,obj,obj
+,,func,func
