@@ -1,0 +1,496 @@
+IN --------\-/-------- OUT
+            |
+            |
+            |
+            |
+            | Stack
+
+
+
+1+(2*3)
+
+(+ 1 (* 2 3))
++ 1 * 2 3
+
+3 2 * 1 +
+
+
+    ┌─┬ +
+┌─┬ * │  
+3 2   1  
+
+
+
+IN: 3 2 * 1 +
+ST:
+
+IN: 3⇣ 2 * 1 +
+ST: 
+
+IN: 3⇣ 2 * 1 +
+ST: 3
+
+IN: 3 2⇣ * 1 +
+ST: 3 2
+⇢
+
+IN: 3 2 *⇣ 1 +
+ST: 3 2 ⇢     ▣ ~ Hi, I am CPU
+
+IN: 3 2 *⇣ 1 +
+ST: 6   ⇠     ▣ 3 * 2 = 6
+
+IN: 3 2 * 1⇣ +
+ST: 6 1        ▣ 
+
+IN: 3 2 * 1 +⇣
+ST: 7   ⇠     ▣ 6 + 1 = 7
+
+SY
+===
+
+IN: 1 + 2
+OU:
+
+IN: 1⇣ + 2
+OU: 1
+
+IN: 1 +⇣ 2
+OU: 1
+
+IN: 1 +⇣ 2
+ST: +
+OU: 1
+
+IN: 1 + 2⇣
+ST: +
+OU: 1 2
+
+IN: 1 + 2
+ST: ⇣+
+OU: 1 2 +
+
+--------------------------------
+
+IN: 1⇣ * 2 + 3
+ST: 
+OU: 1
+
+IN: 1 *⇣ 2 + 3
+ST: *
+OU: 1
+
+IN: 1 * 2⇣ + 3
+ST: *
+OU: 1 2
+
+IN: 1 * 2 +⇣ 3
+ST: * +
+OU: 1 2
+
+IN: 1 * 2 + 3⇣
+ST: * +
+OU: 1 2 3
+
+IN: 1 * 2 + 3
+ST: * +⇣
+OU: 1 2 3 +
+
+IN: 1 * 2 + 3
+ST: *⇣
+OU: 1 2 3 + *
+
+1 *(2 + 3)   ✘
+
+---
+
+⇢⇢⇢⇢⇢⇢
+1 2 3 + *
+↑ ↑   ↓ ↓
+│ └───┘ │
+└───────┘
+
+早出现的符号早运算
+优先级高的符号应早出现
+
+命运的分叉路口
+
+IN: 1 * 2 +⇣ 3
+ST: * 
+OU: 1 2
+
+why + 不可以直接到output？因为+的操作数还没到呢。在逆波兰表达式中，操作总是先于操作符出现的。
+
+rule 1: 操作符总是要到栈中走一遭的。
+
+* 
+1 2
+
+rule n: 优先级高的先走。
+
+IN: 1 * 2 +⇣ 3
+ST:  
+OU: 1 2 *
+
+IN: 1 * 2 + 3⇣
+ST: +
+OU: 1 2 *
+
+IN: 1 * 2 + 3⇣
+ST: 
+OU: 1 2 * 3 +
+
+1 * 2 + 3
+
+while (read token from IN) == OK {
+    if token is operand {
+        push token to OUTPUT;
+    } else if token is operator {
+        // 让优先级高的先走
+        while priority of top of STACK > priority of token {
+            Op = pop STACK;
+            push Op to OUTPUT;
+        }
+        push token to STACK;
+    }
+}
+while STACK is not empty {
+    Op = pop STACK;
+    push Op to OUTPUT;
+}
+
+证明：
+∵ 1. 所有符号都是先到栈，然后到output
+  2. 栈中的符号的优先级总是低于output中的符号
+∴ output中的符号是按照优先级从大到小的顺序排列的
+
+
+IN: a ⊚ b
+ST:
+OU:
+
+IN: a⇣ ⊚⇣ b⇣
+ST: ⊚
+OU: a b
+
+IN: a ⊚ b
+ST: 
+OU: a b ⊚
+
+证明了在output中，操作数总是在操作符的左边
+
+IN: ⟦a⊚b⟧
+ST: 
+OU: ⟦a⊚b⟧ 
+
+2.
+
+IN: a ⊚ b ⊛⇣ c
+ST: ⊚
+OU: a b 
+
+如⊚ > ⊛，则 ⊚ 先进去
+
+IN: a ⊚ b ⊛⇣ c
+ST: 
+OU: a b ⊚
+
+IN: ⟦a⊚b⟧ ⊛ c
+ST: 
+OU: ⟦a⊚b⟧ 
+
+如⊚ < ⊛，则 压入⊛
+
+IN: a ⊚ b ⊛⇣ c⇣
+ST: ⊚ ⊛
+OU: a b c
+
+IN: a ⊚ b ⊛ c
+ST: ⊚ ⊛⇣
+OU: a b c ⊛
+
+IN: a ⊚ ⟦b⊛c⟧
+ST: ⊚ 
+OU: a ⟦b⊛c⟧
+
+
+
+证毕
+
+=========
+
+
+
+
+
+================================
+
+1 * ( 2 + 3 )
+
+IN: 1 * (⇣ 2 + 3 )
+ST: *
+OU: 1
+
+IN: 1 * (⇣ 2 + 3 )
+S₀: * ‖ S₁: 
+OU: 1 ‖
+
+IN: 1 * ( 2⇣ + 3 )
+S₀: * ‖ S₁: 
+O₀: 1 ‖ O₁: 2
+
+IN: 1 * ( 2⇣ + 3 )
+S₀: * ‖ S₁: 
+O₀: 1 ‖ O₁: 2
+
+IN: 1 * ( 2 +⇣ 3⇣ )
+S₀: * ‖ S₁: +
+O₀: 1 ‖ O₁: 2 3
+
+IN: 1 * ( 2 +⇣ 3⇣ )
+S₀: * ‖ S₁: 
+O₀: 1 ‖ O₁: 2 3 +
+
+IN: 1 * ⟦2+3⟧
+S₀: * ‖ S₁: 
+O₀: 1 ‖ O₁: ⟦2+3⟧
+
+IN: 1 * ⟦2+3⟧ ...
+S₀: * ‖ S₁: ‖ S₂
+O₀: 1 ‖ O₁: ⟦2+3⟧ ‖ O₂
+
+IN: 1 * ⟦2+3⟧ ...
+S₀: *
+O₀: 1 ⟦2+3⟧ 
+
+let's go back to
+
+IN: 1 * (⇣ 2 + 3 )
+S₀: * 
+OU: 1 
+
+IN: 1 * (⇣ 2 + 3 )
+S₀: * (
+OU: 1 
+
+IN: 1 * ( 2 + 3 )⇣
+S₀: * ( +
+OU: 1 2 3 
+
+IN: 1 * ( 2 + 3 )⇣
+S₀: * ( 
+OU: 1 2 3 +
+
+IN: 1 * ( 2 + 3 )
+S₀: *  
+OU: 1 2 3 +
+
+IN: 1 * ( 2 + 3 )
+S₀: 
+OU: 1 2 3 + *
+
+1 2 3 + *  -->  1 * ( 2 + 3 )
+
+priority of "(" = -∞;
+while (read token from IN) == OK {
+    if token is operand {
+        push token to OUTPUT;
+    } else if token is operator {
+        // '(' is smallest, '(' is barrier
+        while priority of top of STACK > priority of token { 
+            Op = pop STACK;
+            push Op to OUTPUT;
+        }
+        push token to STACK;
+    } else if token is "(" {
+        push token to STACK; // begin of a virtual stack
+    } else if token is ")" {
+        while top of STACK is not "(" {
+            Op = pop STACK;
+            push Op to OUTPUT;
+        }
+        pop STACK; // pop "("
+    }
+}
+while STACK is not empty {
+    Op = pop STACK;
+    push Op to OUTPUT;
+}
+
+
+--------------------------------
+
+unary operators
+
+start or start of () or []
+
+- 1 + ( - 2 - 3 )
+│───────┘   │
+unary       binary
+
+
+priority of "(" = -∞;
+// 0 is initial state
+state = 0; // 0 is start or start of () or [], 1 else
+while (read token from IN) == OK {
+    if token is operand {
+        push token to OUTPUT;
+        state = 1;
+    } else if token is operator {
+        if state == 0 {
+            mark operator as unary;
+        }
+        while priority of top of STACK > priority of token { 
+            Op = pop STACK;
+            push Op to OUTPUT;
+        }
+        push token to STACK;
+        state = 1;
+    } else if token is "(" {
+        push token to STACK;
+        state = 0;
+    } else if token is ")" {
+        while top of STACK is not "(" {
+            Op = pop STACK;
+            push Op to OUTPUT;
+        }
+        pop STACK;
+        state = 1;
+    }
+}
+while STACK is not empty {
+    Op = pop STACK;
+    push Op to OUTPUT;
+}
+
+-----------------------
+
+[]
+
+IN: a⇣ [⇣ 3⇣ ]
+ST: [
+OU: a 3
+
+IN: a [ 3 ]⇣ 
+ST: 
+OU: a 3 []
+
+--------------------------
+
+function call
+
+IN: f⇣ (⇣ x⇣ )
+ST: (
+OU: f x
+
+IN: f ( x )⇣
+ST: 
+OU: f x (CALL)
+
+f ( a , b )
+⇓
+f a b , (CALL)
+
+IN: f⇣ (⇣ a⇣ ,⇣ b⇣ ,⇣ c⇣ )
+ST: ( , ,
+OU: f a b c
+
+IN: f⇣ (⇣ a⇣ ,⇣ b⇣ ,⇣ c+d⇣ )
+ST: ( , , +
+OU: f a b c d
+
+IN: f ( a , b , c )⇣
+ST: 
+OU: f a b c ,³ 
+
+IN: f ( a , b , c )⇣
+ST: // I'm empty
+OU: f a b c ,³ (CALL)
+
+IN: f ( a , b , c )⇣
+ST: (CALL)
+OU: f a b c ,³ (CALL)
+
+IN: f (⇣ a , b , c )
+ST: (CALL) (
+OU: f 
+
+... else if token == "(" && state == 1 {
+    push (CALL) to STACK
+    push "(" to STACK
+}
+
+// meet ")"
+n = 1;
+while (token = pop stack) != "(" {
+    if token is "," {
+        n++;
+    }
+}
+push ",ⁿ" to STACK
+
+⚠️
+g + f ( )
+⇓
+g f ,¹ (CALL) +      
+⚠️
+
+// meet ")"
+n = 0;
+if state != 0 { // not start of (
+    n = 1;
+}
+while (token = pop stack) != "(" {
+    if token is "," {
+        n++;
+    }
+}
+if top of STACK == "(CALL)" {
+    push (CALL)ⁿ to STACK;
+} else {
+    push ,ⁿ to STACK;
+}
+
+g + f ( )
+⇓
+g f (CALL)⁰ +   
+
+(*fp)(1,3)
+
+-----------------------
+
+结合方向
+
+a . b . c 
+
+foo.bar()
+
+IN: a . b .⇣ c 
+ST: .
+OU: a b
+
+(a.b).c  √
+a.(b.c)  ×
+
+结合性，谁先和谁结合
+
+从左边开始算，就叫左结合。
+
+*&a
+
+IN: a ⊙ b ⊙ᵇ⇣ c 
+ST: ⊙ᵃ
+OU: a b
+
+compare ⊙ᵃ and ⊙ᵇ
+left, ⊙ᵃ is higher
+right, ⊙ᵇ is higher
+
+func compare(a, b) {
+    if priority of a != priority of b {
+        return a - b;
+    } else {
+        return a is left associative ? 1 : -1;
+    }
+}
+
