@@ -10,7 +10,7 @@
 #define enlargeIncrement 4
 #define enlargeFactor 1.75
 
-static void _maybeEnlarge(slice *v, int elemSize);
+static void _maybeEnlarge(slice *v);
 static int _nextCapacity(int nowCapacity);
 
 array *_initarray(array *arr, char *typeStr, int len, int elemSize)
@@ -46,17 +46,17 @@ slice *_initslice(slice *v, char *typeStr, int elemSize, int len, int cap)
 }
 
 // return to be inserted
-void *_push(char *type, slice *v, int elemSize)
+void *_push(char *type, slice *v)
 {
     if (strcmp(type, v->array->type) != 0)
         error("not same type %s %s", type, v->array->type);
-    if (elemSize != v->array->elemSize)
-        error("not same type, got %d, need %d", elemSize, v->array->elemSize);
-    _maybeEnlarge(v, elemSize);
-    return v->array->base + (v->offset + v->len++) * elemSize;
+    // if (elemSize != v->array->elemSize) // char and 'a' is not same size
+    //     error("not same type, got %d, need %d", elemSize, v->array->elemSize);
+    _maybeEnlarge(v);
+    return v->array->base + (v->offset + v->len++) * v->array->elemSize;
 }
 
- void setArrayCap(array *a, int newCap)
+void setArrayCap(array *a, int newCap)
 {
     a->base = realloc(a->base, a->elemSize * newCap);
     checkMem(a->base);
@@ -87,17 +87,17 @@ slice *slp(slice *v, int start, int end)
     return _sl(vec, v, start, end);
 }
 
-int _pop(slice *v, char *typeStr, void *p, int elemSize)
+int _pop(slice *v, char *typeStr, void *p)
 {
     if (strcmp(typeStr, v->array->type) != 0)
         error("type mismatch %s vs %s", typeStr, v->array->type);
     if (v->len == 0)
         error("pop when length is 0");
     v->len--;
-    memcpy(p, v->array->base + (v->offset + v->len) * elemSize, elemSize);
+    memcpy(p, v->array->base + (v->offset + v->len) * v->array->elemSize, v->array->elemSize);
     return v->len;
 }
-void *_sliceget_(char *type,slice *v, int i, int elemSize)
+void *_sliceget_(char *type, slice *v, int i)
 {
     if (strcmp(type, v->array->type) != 0)
         error("not same type %s %s", type, v->array->type);
@@ -105,11 +105,11 @@ void *_sliceget_(char *type,slice *v, int i, int elemSize)
         error("index negative");
     if (i >= v->len)
         error("index out of range");
-    if (elemSize != v->array->elemSize)
-        error("elemSize %d assign to %d", v->array->elemSize, elemSize);
-    return v->array->base + (v->offset + i) * elemSize;
+    // if (elemSize != v->array->elemSize)
+    //     error("elemSize %d assign to %d", v->array->elemSize, elemSize);
+    return v->array->base + (v->offset + i) * v->array->elemSize;
 }
-void *_setslice_(char *type, slice *v, int i, int elemSize)
+void *_setslice_(char *type, slice *v, int i)
 {
     if (strcmp(type, v->array->type) != 0)
         error("not same type %s %s", type, v->array->type);
@@ -117,10 +117,10 @@ void *_setslice_(char *type, slice *v, int i, int elemSize)
         error("index negative");
     if (i >= v->len)
         error("index out of range");
-    return v->array->base + (v->offset + i) * elemSize;
+    return v->array->base + (v->offset + i) * v->array->elemSize;
 }
 
-void *_getarray_(char *type,array *v, int i, int elemSize)
+void *_getarray_(char *type, array *v, int i)
 {
     if (strcmp(type, v->type) != 0)
         error("not same type %s %s", type, v->type);
@@ -128,11 +128,11 @@ void *_getarray_(char *type,array *v, int i, int elemSize)
         error("index negative");
     if (i >= v->len)
         error("index out of range");
-    if (elemSize != v->elemSize)
-        error("elemSize %d assign to %d", v->elemSize, elemSize);
-    return v->base + (i)*elemSize;
+    // if (elemSize != v->elemSize)
+    //     error("elemSize %d assign to %d", v->elemSize, elemSize);
+    return v->base + (i)*v->elemSize;
 }
-void *_setarray_(char *type, array *v, int i, int elemSize)
+void *_setarray_(char *type, array *v, int i)
 {
     if (strcmp(type, v->type) != 0)
         error("not same type %s %s", type, v->type);
@@ -140,11 +140,13 @@ void *_setarray_(char *type, array *v, int i, int elemSize)
         error("index negative");
     if (i >= v->len)
         error("index out of range");
-    return v->base + (i)*elemSize;
+    return v->base + (i)*v->elemSize;
 }
 
-void _copy(slice *dst, int i, int ii, slice *src, int k, int kk, int size1, int size2)
+void _copy(slice *dst, int i, int ii, slice *src, int k, int kk)
 {
+    int size1 = dst->array->elemSize;
+    int size2 = src->array->elemSize;
     if (size1 != size2)
         error("size not equal %d!=%d when copy", size1, size2);
     if (strcmp(dst->array->type, src->array->type) != 0)
@@ -191,7 +193,7 @@ slice *slicefinal(slice *s)
 }
 
 // ==== private ====
-static void _maybeEnlarge(slice *v, int elemSize)
+static void _maybeEnlarge(slice *v)
 {
     if (v->array->len == 0)
     {

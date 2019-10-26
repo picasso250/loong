@@ -14,10 +14,12 @@ map *_mapMake(map *m, const char *typeStr, int elemSize, int factor);
 #define initmap(m, t) _mapMake(m, #t, sizeof(t), MAP_INIT_FACTOR)
 #define newmap(t) _mapMake(alloc(map), #t, sizeof(t), MAP_INIT_FACTOR)
 
-void *_mapGet(map *m, char *key, char *type, int elemSize);
-#define _getmap(m, key, T) (*(T *)_mapGet(m, (char *)key, #T, sizeof(T)))
-void *_mapSet(map *m, char *key, char *type, int elemSize);
-#define _setmap(m, key, T, value) (*(T *)_mapSet(m, (char *)key, #T, sizeof(value)) = value)
+void *_mapGet(map *m, char *key, char *type);
+#define _getmapp(m, key, T) ((T *)_mapGet(m, (char *)key, #T))
+#define _getmap(m, key, T) (*_getmapp(m, key, T))
+void *_mapSet(map *m, char *key, char *type);
+#define _setmap(m, key, T, value) \
+    (*(T *)_mapSet(m, (char *)key, #T) = (T)(value))
 int _mapDel(map *m, char *key);
 #define del(m, key) _mapDel(m, key)
 

@@ -21,7 +21,7 @@ map *_mapMake(map *m, const char *typeStr, int elemSize, int factor)
     memset(m->base, 0, sizeof(mapentry *) * factor);
 }
 
-void *_mapGet(map *m, char *key, char *type, int elemSize)
+void *_mapGet(map *m, char *key, char *type)
 {
     _mapTypeCheck(m, type, __func__);
     unsigned h = hashCStr(key, m->factor);
@@ -70,15 +70,7 @@ static void _mapEnlarge(map *m, int newFactor)
     checkMem(tmp);
     int i = 0;
     formap(m, k, int, _)
-        // for (int _i_ = 0; _i_ < m->factor; _i_++)
-        // {
-        //     for (mapentry *_pme_ = m->base[_i_]; _pme_; _pme_ = _pme_->next)
-        //     {
-        //         char *k = _pme_->key;
-        //         int _ = *(int *)_pme_->value;
         tmp[i++] = _pme_;
-    //     }
-    // }
     endformap;
 
     m->factor = newFactor;
@@ -94,6 +86,7 @@ static void _mapEnlarge(map *m, int newFactor)
         if (m->base[index] == NULL)
         {
             m->base[index] = e;
+            e->next = NULL;
         }
         else
         {
@@ -114,7 +107,7 @@ static void _mapEnlargeMaybe(map *m)
         }
     }
 }
-void *_mapSet(map *m, char *key, char *type, int elemSize)
+void *_mapSet(map *m, char *key, char *type)
 {
     _mapTypeCheck(m, type, __func__);
 
@@ -125,13 +118,13 @@ void *_mapSet(map *m, char *key, char *type, int elemSize)
 
     if (m->first == NULL)
     {
-        m->first = m->base[index] = _newMapEntry(key, elemSize, NULL);
+        m->first = m->base[index] = _newMapEntry(key, m->elemSize, NULL);
         m->len++;
         return m->base[index]->value;
     }
     if (m->base[index] == NULL)
     {
-        m->base[index] = _newMapEntry(key, elemSize, NULL);
+        m->base[index] = _newMapEntry(key, m->elemSize, NULL);
         m->len++;
     }
     else
@@ -146,7 +139,7 @@ void *_mapSet(map *m, char *key, char *type, int elemSize)
             ep = ep->next;
         }
         // not found, insert to head
-        m->base[index] = _newMapEntry(key, elemSize, m->base[index]);
+        m->base[index] = _newMapEntry(key, m->elemSize, m->base[index]);
         m->len++;
     }
     return m->base[index]->value;

@@ -5,21 +5,72 @@
 #include "buildin.h"
 #include "str.h"
 #include "print.h"
+#include "csv.h"
 
 map priorityTable;
+map directionTable;
+map nTable;
+
+void initTable()
+{
+    initmap(&priorityTable, int);
+    initmap(&directionTable, int);
+    initmap(&nTable, int);
+    slice *csv = parseCSVFile("operators.csv");
+    notNull(csv);
+    int p = 0;
+    forslice(csv, i, slice, line)
+    {
+        if (i==0) continue;
+        str k = get(&line, 'B' - 'A', str);
+        int n = atoi(cstr(getp(&line, 'I' - 'A', str)));
+        if (n == 1) // unary
+        {
+            str ss;
+            initslice(&ss, char, 0, 0);
+            strExtendCstr(&ss, ".");
+            strExtend(&ss, &k);
+            k = ss;
+        }
+        char *key = cstr(&k);
+
+        str *s = (getp(&line, 'A' - 'A', str));
+        if (len(s) > 0)
+            p = atoi(cstr(s));
+        set(&priorityTable, key, int, p);
+
+        set(&directionTable, key, int, atoi(cstr(getp(&line, 'F' - 'A', str))));
+    }
+    endforslcie
+}
+int priority(const char *op)
+{
+    return get(&priorityTable, op, int);
+}
+int direction(const char *op)
+{
+    return get(&directionTable, op, int);
+}
+
+int cmp(const char *op1, const char *op2)
+{
+    int pd = -(priority(op1) - priority(op2));
+    if (pd == 0)
+    {
+        return direction(op1);
+    }
+}
+
 char *top(slice *stack)
 {
     return get(stack, len(stack) - 1, char *);
 }
-int pr(const char *op)
-{
-    return get(&priorityTable, op, int);
-}
+
 bool GreaterPrecedence(slice *stack, const char *tk)
 {
-    return (len(stack) > 0 &&
-            // priority of stack operator
-            pr(top(stack)) > pr(tk));
+    return len(stack) > 0 &&
+           // priority of stack operator
+           cmp(top(stack), (tk)) > 0;
 }
 void popTo(slice *stack, slice *output)
 {
@@ -29,13 +80,10 @@ void popTo(slice *stack, slice *output)
 }
 int main()
 {
-    initmap(&priorityTable, int);
-    set(&priorityTable, "+", int, 10);
-    set(&priorityTable, "-", int, 10);
-    set(&priorityTable, "*", int, 20);
-    set(&priorityTable, "/", int, 20);
+    initTable();
 
-    char *tklst[] = {"1", "*", "2", "+", "3","*", "4"};
+    // char *tklst[] = {"1", "*", "(", "2", "+", "3", ")","*", "4"};
+    char *tklst[] = {"1", "-", "2", "+", "3"};
     int tklstpos = 0;
 
     slice output;
@@ -60,11 +108,11 @@ int main()
         }
         else
         {
-    printf("%s\n", cstr(toStr(&output)));
+            printf("%s\n", cstr(toStr(&output)));
             while (GreaterPrecedence(&stack, tk))
                 popTo(&stack, &output);
             push(&stack, char *, tk);
-    printf("%s\n", cstr(toStr(&output)));
+            printf("%s\n", cstr(toStr(&output)));
         }
     }
     while (len(&stack) > 0)

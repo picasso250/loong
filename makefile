@@ -14,6 +14,9 @@ RM = rm -rf
 CP = cp -f
 endif
 
+BDO= util.o type.o gc.o slice.o  map.o hash.o str.o buildin.o  print.o 
+BDC= util.c type.c gc.c slice.c  map.c hash.c str.c buildin.c  print.c 
+
 s1: s1.o strbuf.o
 	$(CC) -o s1 s1.o strbuf.o
 
@@ -25,8 +28,14 @@ strbuf.o : strbuf.c strbuf.h
 macro.o: macro.c util.h
 	$(CC) --std=c11 -ggdb -c macro.c
 
-test: test.o gc.o util.o buildin.o slice.o type.o map.o hash.o *.c *.h
-	$(CC) -o test --std=c11 -ggdb *test*.c util.o type.o gc.o buildin.o slice.o map.o hash.o
+ShuntingYard: ShuntingYard.c $(BDO) csv.o
+	$(CC) -o ShuntingYard --std=c11 -ggdb ShuntingYard.c $(BDO) csv.o
+
+csv.o: csv.c csv.h 
+	$(CC) --std=c11 -ggdb -c csv.c 
+
+test: *.o  *.c *.h
+	$(CC) -o test --std=c11 -ggdb *test*.c $(BDO)
 
 test.o: test.c test.h gc.h util.h buildin.h slice.h map.h type.h *test*.c
 	bash test_before.sh
@@ -44,6 +53,9 @@ gc.o: gc.c gc.h util.h  type.h
 slice.o: slice.c slice.h type.h gc.h util.h buildin.h
 	$(CC) --std=c11 -ggdb -c slice.c
 
+str.o: str.c str.h type.h gc.h util.h buildin.h
+	$(CC) --std=c11 -ggdb -c str.c
+
 hash.o: hash.c hash.h type.h gc.h util.h buildin.h hash.h
 	$(CC) --std=c11 -ggdb -c hash.c
 
@@ -53,5 +65,8 @@ map.o: map.c map.h type.h gc.h util.h buildin.h hash.h
 buildin.o: buildin.c buildin.h 
 	$(CC) --std=c11 -ggdb -c buildin.c
 
+print.o: print.c print.h buildin.h
+	$(CC) --std=c11 -ggdb -c print.c
+
 clean :
-	$(RM) s1 test test.o s1.o strbuf.o macro.o slice.o gc.o util.o buildin.o type.o
+	$(RM) s1 *.o
