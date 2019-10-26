@@ -31,6 +31,9 @@ macro.o: macro.c util.h
 ShuntingYard: ShuntingYard.c $(BDO) csv.o
 	$(CC) -o ShuntingYard --std=c11 -ggdb ShuntingYard.c $(BDO) csv.o
 
+csv: csv.o csv.h $(BDO)
+	$(CC) -o csv csv.o $(BDO)
+
 csv.o: csv.c csv.h 
 	$(CC) --std=c11 -ggdb -c csv.c 
 

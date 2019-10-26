@@ -16,66 +16,76 @@ slice *parseCSVFile(char *filename)
     str *word = newStr();
     slice *line = newslice(str, 0, 0);
     slice *lines = newslice(slice, 0, 0);
+    int state = 0; // 0:OUT 1:IN of string
+    char last;
     while ((c = fgetc(fp)) != EOF)
     {
-        if (c == ',')
+        if (c == ',' && state == 0)
         {
             push(line, str, *word);
             free((word));
             word = newStr();
         }
+        else if (c == '"')
+        {
+            switch (state)
+            {
+            case 0:
+                state = 1;
+                break;
+            case 1:
+                state = 0;
+                break;
+            default:
+                error("should not here");
+            }
+        }
         else if (c == '\r')
         {
             if ((c = fgetc(fp)) == EOF)
-                goto FILE_END;
+                break;
             else if (c == '\n')
             {
-                if ((c = fgetc(fp)) == EOF)
-                    goto FILE_END_LINE;
-                else
-                {
-                    ungetc(c, fp);
-                    goto LINE_END;
-                }
+
+                goto LINE_END;
             }
             else
                 ungetc(c, fp);
         }
         else if (c == '\n')
         {
-            if ((c = fgetc(fp)) == EOF)
-                goto FILE_END_LINE;
-            else
-            {
-                ungetc(c, fp);
-                goto LINE_END;
-            }
+
+            goto LINE_END;
         }
         else
         {
-            push(word, char, c);// 228
-            // char *ppp = (char *)_push("char", (word));
-            // (*ppp = (char)(c));
+            push(word, char, c); // 228
         }
+        last = c;
         continue;
     LINE_END:
         push(line, str, *word);
         free((word));
         word = newStr();
         push(lines, slice, *line);
-        // printf("%s\n", cstr(toStr(line)));
+        printf("%s\n", cstr(toStr(line)));
         free((line));
         line = newslice(str, 0, 0);
+        state = 0;
+        last = '\n';
     }
-FILE_END:
-    push(line, str, *word);
-    push(lines, slice, *line);
-FILE_END_LINE:
+
+    if (!(last == '\n' || last == '\r'))
+    {
+        push(line, str, *word);
+        push(lines, slice, *line);
+    }
+
     free((word));
     // word = newStr();
     free((line));
     // line = newslice(str, 0, 0);
-    printf("%s\n", cstr(toStr(lines)));
+    // printf("%s\n", cstr(toStr(lines)));
     fclose(fp);
     // if (len(lines) > 0)
     // {
@@ -85,9 +95,10 @@ FILE_END_LINE:
     // }
     return lines;
 }
-int main(int argc, char *argv[])
-{
-    slice*lines=parseCSVFile(argv[1]);
-    notNull(lines);
-    return 0;
-}
+// int main(int argc, char *argv[])
+// {
+//     slice *lines = parseCSVFile(argv[1]);
+//     notNull(lines);
+//     printf("%s\n", cstr(toStr(lines)));
+//     return 0;
+// }
