@@ -13,24 +13,21 @@ map nTable;
 
 void initTable()
 {
-    initmap(&priorityTable, int);
-    initmap(&directionTable, int);
-    initmap(&nTable, int);
     slice *csv = parseCSVFile("operators.csv");
+    initmap(&priorityTable, int, len(csv));
+    initmap(&directionTable, int, len(csv));
+    initmap(&nTable, int, len(csv));
     notNull(csv);
     int p = 0;
     forslice(csv, i, slice, line)
     {
-        if (i==0) continue;
+        if (i == 0)
+            continue;
         str k = get(&line, 'B' - 'A', str);
         int n = atoi(cstr(getp(&line, 'I' - 'A', str)));
-        if (n == 1) // unary
+        if (n == 1) // unary, add . after
         {
-            str ss;
-            initslice(&ss, char, 0, 0);
-            strExtendCstr(&ss, ".");
-            strExtend(&ss, &k);
-            k = ss;
+            strExtendCstr(&k, ".");
         }
         char *key = cstr(&k);
 
@@ -42,6 +39,7 @@ void initTable()
         set(&directionTable, key, int, atoi(cstr(getp(&line, 'F' - 'A', str))));
     }
     endforslcie
+    // _mapGraph(&priorityTable, "%d");
 }
 int priority(const char *op)
 {
@@ -66,24 +64,23 @@ char *top(slice *stack)
     return get(stack, len(stack) - 1, char *);
 }
 
-bool GreaterPrecedence(slice *stack, const char *tk)
-{
-    return len(stack) > 0 &&
-           // priority of stack operator
-           cmp(top(stack), (tk)) > 0;
-}
 void popTo(slice *stack, slice *output)
 {
     char *op;
     pop(stack, char *, op);
     push(output, char *, op);
 }
+static bool isPBLeft(char *op)
+{
+    return strcmp(op, "(") == 0 || strcmp(op, "[") == 0;
+}
 int main()
 {
     initTable();
 
-    // char *tklst[] = {"1", "*", "(", "2", "+", "3", ")","*", "4"};
-    char *tklst[] = {"1", "-", "2", "+", "3"};
+    char *tklst[] = {"1", "*", "(", "2", "+", "3", ")", "*", "4"};
+    // char *tklst[] = {"1", "-", "2", "+", "3"};
+    // char *tklst[] = {"1", "-", "2", "+", "3"};
     int tklstpos = 0;
 
     slice output;
@@ -96,6 +93,20 @@ int main()
         char *tk = tklst[i];
         if (isalnum(tk[0])) // operand
             push(&output, char *, tk);
+        else if (get(&priorityTable, tk, int)) // If it's an operator
+        {
+            printf("%s\n", cstr(toStr(&output)));
+            if (len(&stack))
+            {
+            }
+            // 让优先级高的大佬先走
+            // 括号相当于一个新的栈
+            while (len(&stack) > 0 && !isPBLeft(top(&stack)) && cmp(top(&stack), tk) > 0)
+            {
+                popTo(&stack, &output);
+            }
+            push(&stack, char *, tk);
+        }
         else if (strcmp(tk, "(") == 0)
             push(&stack, char *, tk);
         else if (strcmp(tk, ")") == 0)
@@ -105,14 +116,6 @@ int main()
             if (len(&stack) == 0)
                 error("parasis not compair");
             stack.len--;
-        }
-        else
-        {
-            printf("%s\n", cstr(toStr(&output)));
-            while (GreaterPrecedence(&stack, tk))
-                popTo(&stack, &output);
-            push(&stack, char *, tk);
-            printf("%s\n", cstr(toStr(&output)));
         }
     }
     while (len(&stack) > 0)
