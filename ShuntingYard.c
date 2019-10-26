@@ -86,8 +86,8 @@ int main()
     // char *tklst = "-1+a*(-2/6)";
     // char *tklst = "1-a[-3*2]+4";
     // char *tklst = "*&p";
-    char *tklst = "f(a,b)"; //  fab,c,(CALL)
-    // char *tklst = "+(f(a,b,c)(*p)(a,b))";
+    // char *tklst = "f(a,b,c)"; //  fab,c,(CALL)
+    char *tklst = "+(f(a,b,c)(*p)(a,b))";
     // char *tklst = "+((a,b,c))";
     int tklstpos = 0;
 
@@ -140,15 +140,14 @@ int main()
         else if (strcmp(tk, ")") == 0)
         {
             while (len(&stack) > 0 &&
-                   (strcmp(top(&stack), "(") != 0 &&
-                    strcmp(top(&stack), "(CALL)") != 0))
+                   (strcmp(top(&stack), "(") != 0 ))
                 popTo(&stack, &output);
             if (len(&stack) == 0)
                 error("parentheses() not balanced");
-            // stack.len--;
-            if (strcmp(pop(&stack, char *), "(CALL)") == 0)
+            stack.len--;
+            if (strcmp(top(&stack), "(CALL)") == 0)
             {
-                push(&output, char *, "(CALL)");
+                popTo(&stack, &output);
             }
             state = 1;
         }
@@ -241,11 +240,13 @@ void computeBinary(slice *computer, char *op)
     else if (strcmp(op, "(CALL)") == 0)
     {
         str *op2 = popp(computer, str);
-        set(op2, 0, char, ' ');
+        // set(op2, 0, char, ' ');
         str *op1 = popp(computer, str);
         str *res = newStr();
+        strExtendCstr(res,"(");
         strExtend(res, op1);
         strExtend(res, op2);
+        strExtendCstr(res,")");
         push(computer, str, *res);
     }
     else
