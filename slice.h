@@ -24,8 +24,9 @@ slice *_initslice(slice *v, char *typeStr, int elemSize, int len, int cap);
 void *_push(char *type, slice *v);
 #define push(v, T, a) \
   (*(T *)_push(#T, (v)) = (T)(a))
-int _pop(slice *v, char *typeStr, void *p);
-#define pop(v, T, a) _pop((v), #T, &(a))
+void *_pop(slice *v, char *typeStr);
+#define popp(v, T) ((T *)_pop((v), #T))
+#define pop(v, T) (*popp(v, T))
 
 void *_getarray_(char *type, array *v, int i);
 #define _getarrayp(v, i, T) \
@@ -51,10 +52,10 @@ void _copy(slice *dst, int i, int ii, slice *src, int k, int kk);
 
 void setArrayCap(array *a, int newCap);
 
-#define forslice(s, i, T, v)       \
+#define forslice(s, i, T, v)         \
   for (int i = 0; i < (s)->len; i++) \
-  {                                \
-    T v = *((T *)(s)->array->base + s->offset + i);
+  {                                  \
+    T v = *((T *)(s)->array->base + (s)->offset + i);
 #define endforslcie }
 
 #endif

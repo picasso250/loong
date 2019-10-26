@@ -1,6 +1,8 @@
 #include "map.h"
 #include "hash.h"
 
+static int _mapNextLen(int len);
+
 static void _mapTypeCheck(map *m, char *type, const char *func)
 {
     if (strcmp(type, m->type) != 0)
@@ -8,17 +10,17 @@ static void _mapTypeCheck(map *m, char *type, const char *func)
         error("%s() map type mismatch %s %s", func, type, m->type);
     }
 }
-map *_mapMake(map *m, const char *typeStr, int elemSize, int factor)
+map *_mapMake(map *m, const char *typeStr, int elemSize, int len)
 {
     if (elemSize > sizeof(void *))
         error("not enough space for primitive type");
     _zero(m);
     m->type = typeStr;
     m->elemSize = elemSize;
-    m->factor = factor;
-    m->base = (mapentry **)calloc(factor, sizeof(mapentry *));
+    m->factor = _mapNextLen(len);
+    m->base = (mapentry **)calloc(m->factor, sizeof(mapentry *));
     checkMem(m->base);
-    memset(m->base, 0, sizeof(mapentry *) * factor);
+    memset(m->base, 0, sizeof(mapentry *) * m->factor);
 }
 
 void *_mapGet(map *m, char *key, char *type)
@@ -95,12 +97,14 @@ static void _mapEnlarge(map *m, int newFactor)
         }
     }
     free(tmp);
+    // printf("rehash ");
+    // _mapGraph(m, "%d");
 }
 static void _mapEnlargeMaybe(map *m)
 {
-    if (m->len > m->factor * 2)
+    if (m->len > m->factor)
     {
-        int newf = _mapNextLen(m->factor * 2);
+        int newf = _mapNextLen(m->factor);
         if (newf > m->factor)
         {
             _mapEnlarge(m, newf);
@@ -144,15 +148,15 @@ void *_mapSet(map *m, char *key, char *type)
     }
     return m->base[index]->value;
 }
-static void _mapentryFree(mapentry *e,int elemSize)
+static void _mapentryFree(mapentry *e, int elemSize)
 {
     if (e == NULL)
         error("free null mapentry");
     if (e->value == NULL)
         error("free null mapentry value");
-    memset(e->value,0,elemSize);
+    memset(e->value, 0, elemSize);
     free(e->value);
-    e->value=NULL;
+    e->value = NULL;
     free(e);
 }
 int _mapDel(map *m, char *key)
@@ -178,7 +182,7 @@ int _mapDel(map *m, char *key)
                 prev->next = ep->next;
             }
             m->len--;
-            _mapentryFree(ep,m->elemSize);
+            _mapentryFree(ep, m->elemSize);
             return 1;
         }
         prev = ep;
@@ -188,7 +192,7 @@ int _mapDel(map *m, char *key)
 }
 void _mapGraph(map *m, char *fmt)
 {
-    printf("Map %X\n", m);
+    printf("Map len=%d factor=%d 0x%X\n", m->len, m->factor, m);
     for (int _i_ = 0; _i_ < m->factor; _i_++)
     {
         printf("\t%s", m->base[_i_] ? "-:> " : "NULL");
@@ -196,7 +200,9 @@ void _mapGraph(map *m, char *fmt)
         {
             char *k = _pme_->key;
             int v = *(int *)_pme_->value;
-            printf("(%s->%d) -> ", k, v);
+            char buf[100] = "";
+            sprintf(buf, "(%s: %s) -> ", "\"%s\"", fmt);
+            printf(buf, k, v);
         }
         printf("\n");
     }
@@ -211,8 +217,8 @@ map *mapfinal(map *m)
             while (p)
             {
                 mapentry *pp = p->next;
-                p->next =NULL;
-                _mapentryFree(p,m->elemSize);
+                p->next = NULL;
+                _mapentryFree(p, m->elemSize);
                 p = pp;
             }
         }

@@ -87,15 +87,13 @@ slice *slp(slice *v, int start, int end)
     return _sl(vec, v, start, end);
 }
 
-int _pop(slice *v, char *typeStr, void *p)
+void* _pop(slice *v, char *typeStr)
 {
     if (strcmp(typeStr, v->array->type) != 0)
         error("type mismatch %s vs %s", typeStr, v->array->type);
     if (v->len == 0)
         error("pop when length is 0");
-    v->len--;
-    memcpy(p, v->array->base + (v->offset + v->len) * v->array->elemSize, v->array->elemSize);
-    return v->len;
+    return v->array->base + (v->offset + --v->len) * v->array->elemSize;
 }
 void *_sliceget_(char *type, slice *v, int i)
 {

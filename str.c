@@ -5,6 +5,7 @@ str *newStr()
 }
 void strExtendCstr(str *st, char *s)
 {
+    // segment fault?
     setArrayCap(st->array, st->len + strlen(s));
     memcpy(st->array->base + st->offset + st->len, s, strlen(s));
     st->len += strlen(s);
@@ -20,4 +21,10 @@ char *cstr(str *s)
     setArrayCap(s->array, s->len + 1);
     s->array->base[s->len] = '\0';
     return s->array->base;
+}
+str *newStrFromCStr(char *cs)
+{
+    str *s = newStr();
+    strExtendCstr(s,cs);
+    return s;
 }
