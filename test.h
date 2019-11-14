@@ -3,28 +3,25 @@
 
 #include "util.h"
 
-#define testEqual(really, should)                                                                             \
-    do                                                                                                        \
-    {                                                                                                         \
-        if (really != should)                                                                                 \
-        {                                                                                                     \
+#define testEqual(really, should)                                                                              \
+    do                                                                                                         \
+    {                                                                                                          \
+        if ((really) != (should))                                                                              \
+        {                                                                                                      \
             fprintf(stderr, "./%s:%d %s() %s %s not equal: ", __FILE__, __LINE__, __func__, #really, #should); \
-            fprintf(stderr, format_identifier(really), really);                                               \
-            fprintf(stderr, " ");                                                                             \
-            fprintf(stderr, format_identifier(should), should);                                               \
-            fprintf(stderr, "\n");                                                                            \
-            abort();                                                                                          \
-        }                                                                                                     \
+            fprintf(stderr, "\n");                                                                             \
+            abort();                                                                                           \
+        }                                                                                                      \
     } while (0)
 
-#define testTrue(cond)                                                                         \
-    do                                                                                         \
-    {                                                                                          \
+#define testTrue(cond)                                                                           \
+    do                                                                                           \
+    {                                                                                            \
         if (!(cond))                                                                             \
-        {                                                                                      \
+        {                                                                                        \
             fprintf(stderr, "./%s:%d: %s() %s not true\n", __FILE__, __LINE__, __func__, #cond); \
-            abort();                                                                           \
-        }                                                                                      \
+            abort();                                                                             \
+        }                                                                                        \
     } while (0)
 
 #endif
