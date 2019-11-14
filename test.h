@@ -8,7 +8,7 @@
     {                                                                                                         \
         if (really != should)                                                                                 \
         {                                                                                                     \
-            fprintf(stderr, "%s:%d: %s() %s %s not equal: ", __FILE__, __LINE__, __func__, #really, #should); \
+            fprintf(stderr, "./%s:%d %s() %s %s not equal: ", __FILE__, __LINE__, __func__, #really, #should); \
             fprintf(stderr, format_identifier(really), really);                                               \
             fprintf(stderr, " ");                                                                             \
             fprintf(stderr, format_identifier(should), should);                                               \
@@ -22,7 +22,7 @@
     {                                                                                          \
         if (!(cond))                                                                             \
         {                                                                                      \
-            fprintf(stderr, "%s:%d: %s() %s not true\n", __FILE__, __LINE__, __func__, #cond); \
+            fprintf(stderr, "./%s:%d: %s() %s not true\n", __FILE__, __LINE__, __func__, #cond); \
             abort();                                                                           \
         }                                                                                      \
     } while (0)
