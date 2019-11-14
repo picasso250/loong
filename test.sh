@@ -10,12 +10,15 @@ if [ $# -eq 1 ]; then
     # gen
     fname=.test$1.c
     echo "#include \"test.h\"" > $fname
+    grep -o -P '\btest\w+\(\)' "$1_test.c" | sed 'i\void
+    a\;' >> $fname
     echo "int main(int argc, char *argv[]){" >> $fname
-    grep -P '^void\s+test\w+' "$1_test.c" | sed 'a\;' >> $fname
+    grep -o -P '\btest\w+\(\)' "$1_test.c"
+    grep -o -P '\btest\w+\(\)' "$1_test.c" | sed 'a\;' >> $fname
     echo "printf(\"OK.\\n\"); }" >> $fname
 
     # compile and run
-    gcc -std=c11 -o .test$1 $fname && ./.test$1
+    gcc -std=c11 -o .test$1 $1.c "$1_test.c" $fname && ./.test$1
 else
     echo "todo all test"
 fi
