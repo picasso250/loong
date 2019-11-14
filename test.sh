@@ -18,7 +18,7 @@ if [ $# -eq 1 ]; then
     echo "printf(\"OK.\\n\"); }" >> $fname
 
     # compile and run
-    gcc -std=c11 -o .test$1 $1.c "$1_test.c" $fname && ./.test$1
+    gcc -std=c11 -o .test$1 "util.c" "$1.c" "$1_test.c" $fname && ./.test$1
 else
     echo "todo all test"
 fi
