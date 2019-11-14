@@ -2,12 +2,8 @@
 #include <stdalign.h>
 
 #include "util.h"
+#include "cstrstack.h"
 
-// structure:
-// char*cur; elems...
-// elem:
-// [char]; int len;
-typedef char **cstrstack;
 void *cssnew()
 {
     return _alloc_and_zero(sizeof(int) + sizeof(char *), __FILE__, __LINE__, "cstrstack");
