@@ -34,12 +34,14 @@ if [ $# -eq 1 ]; then
     grep -o -P '\btest\w+\(\)' "$1_test.c" | sed 'i\void
     a\;' >> $fname
     echo "int main(int argc, char *argv[]){" >> $fname
-    grep -o -P '\btest\w+\(\)' "$1_test.c"
+    if [[ $COMPILE_ONLY -eq 0 ]]; then
+        grep -o -P '\btest\w+\(\)' "$1_test.c"
+    fi
     grep -o -P '\btest\w+\(\)' "$1_test.c" | sed 'a\;' >> $fname
     echo "printf(\"OK.\\n\"); }" >> $fname
 
     # compile and run
-    gcc -std=c11 -o .test$1 "util.c" "$1.c" "$1_test.c" $fname
+    gcc -std=c11 -ggdb -o .test$1 "util.c" "$1.c" "$1_test.c" $fname
     if [[ $COMPILE_ONLY -eq 0 && $? -eq 0 ]]; then
         ./.test$1
     fi
