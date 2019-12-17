@@ -6,37 +6,44 @@
 
 void *cssnew()
 {
-    return _alloc_and_zero(sizeof(int) + sizeof(char *), __FILE__, __LINE__, "cstrstack");
+    return alloc(char*);
 }
-void csspush(cstrstack st, char *str)
+// return size(by char)
+static int fitTo(int size, int w)
 {
+    int n = size / w;
+    if (size % w)
+        n++;
+    return n*w;
+}
+cstrstack csspush(cstrstack st, char *str)
+{
+    // init if zeroed
     char *cur = *st;
     char *begin = (char *)(st + 1);
     if (cur == 0)
-        *(char **)st = begin;
+        cur = begin;
 
     ptrdiff_t len = cur - begin;
-    int slen = strlen(str); // align
-    int wordlen = sizeof(int);
-    int blocklen = (slen + 1) / wordlen;
-    if ((slen + 1) % wordlen)
-        blocklen++;
-    st = realloc(st, len + blocklen * wordlen + wordlen);
+    int slen = strlen(str);
+    int w = sizeof(char *); // align with char*
+    int expandsize = fitTo(slen + 1, w) + w;
+    st = realloc(st, len + expandsize);
     memcpy(cur, str, slen + 1);
-    *(char *)((int *)cur + blocklen) = cur;
-    **st = (char *)((int *)cur + blocklen + 1); // to next slot
+    *st = cur + expandsize;                 // cur to next slot
+    *(char **)(cur + expandsize - w) = cur; // tail to previous
+    return st;
 }
 bool cssempty(cstrstack st)
 {
     char *cur = *st;
-    return cur == 0 || cur == st + 1;
+    return cur == NULL || cur == (char *)st + sizeof(char*);
 }
 char *csspop(cstrstack st)
 {
     if (cssempty(st))
         error("pop from empty stack");
-    char *cur = *(char **)(st + 1);
-    **st = (int *)cur - 1;
-    if (cssempty(st))
-        st = realloc(st, sizeof(char *));
+    char *cur = *st;
+    *st = *(char**)(cur-sizeof(char*)); // make cur point to previous
+    return *st;
 }

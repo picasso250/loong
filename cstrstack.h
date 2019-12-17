@@ -1,14 +1,18 @@
-
+#ifndef _CSTRSTACK_H_
+#define _CSTRSTACK_H_
 
 // structure:
 // char*cur; elems...
 // elem:
-// [char]; int len;
+// [char]; padding; char* prev;
 typedef char **cstrstack;
+
 void *cssnew();
 
-void csspush(cstrstack st, char *str);
+cstrstack csspush(cstrstack st, char *str);
 
 bool cssempty(cstrstack st);
 
 char *csspop(cstrstack st);
+
+#endif // _CSTRSTACK_H_
