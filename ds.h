@@ -22,13 +22,21 @@ int LenIntList(IntList *lst);
 void U(IntList *lst, int a); // pUsh
 int O(IntList *lst);         // pOp
 
+static int incrAfter(int *p, int cap)
+{
+    return *p < cap ? (*p)++ : (*p = 0);
+}
+static int decrBefore(int *p, int cap)
+{
+    return *p >= 0 ? --*p : (*p = cap - 1);
+}
 void E(IntList *lst, int a) // Enque
 {
-    lst->data[lst->end++] = a;
+    lst->data[incrAfter(&lst->end, lst->cap)] = a;
 }
 int D(IntList *lst) // Deque
 {
-    return lst->data[--lst->start];
+    return lst->data[decrBefore(&lst->start, lst->cap)];
 }
 
 IntList *_NewIntList(int cap)
