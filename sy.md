@@ -1039,20 +1039,22 @@ function call
 说了那么多废话，我只是想引出一个问题：如何用Shunting Yard 算法解析这门语言的表达式？
 
 答案：
+
+重点其实是改变逆波兰表达式的求值方式。。。
+
 1. using space as operator, priority of space is as high as "( )"
 2. scan, if SUCCESS, mark it
 3. scan from right, call SUCCESS
 4. sub it with its result
 5. go to 2
 
-IN: top of STACK is not "("
-OU: top of (SPACE) STACK (SPACE) is (SPACE) not (SPACE) "(" (SPACE)
+例子：
 
-ST: top of (SPACE) STACK (SPACE) (SUCCESS) is (SPACE) not (SPACE) "(" (SPACE)
+    IN: top of STACK is not "("
+    OU: top of (SPACE) STACK (SPACE) is (SPACE) not (SPACE) "(" (SPACE)
 
-ST: A is (SPACE) not (SPACE) "(" (SPACE)
+    ST: top of (SPACE) STACK (SPACE) (SUCCESS) is (SPACE) not (SPACE) "(" (SPACE)
 
+    ST: A is (SPACE) not (SPACE) "(" (SPACE)
 
-top of STACK is not X and Y ((real compare (top of STACK) and Token) > 0) 
-
-(FUNCTION is not X) (FUNCTION top of X) STACK (CALL) 
+    ST: B
