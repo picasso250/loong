@@ -661,6 +661,12 @@ unary operators
     unary       binary
     单目         双目
 
+我们用 -₁ 表示单目运算符
+-₂表示双目运算符
+那么上面的式子转成逆波兰表达式就是：
+
+    1 -₁ 2 -₁ 3 -₂ +₂
+
 我们用一个简单的技巧，这个技巧在《C编程语言》这本神书的第一个程序里有用到。
 
 我们将使用State变量来标记式子的开头，或者紧跟着括号与否。
@@ -668,87 +674,152 @@ unary operators
 0 表示开头或者紧跟着括号
 
     # 一开始，式子的开头，肯定要是0
-    state = 0
+    State = 0
     while (read Token from INPUT) is OK {
         if Token is "(" {
             push Token to STACK
-            state = 0
+            State = 0 # 接下来的Token紧跟着括号
+            continue
         } else if Token is ")" {
             while top of STACK is not "(" {
                 pop STACK to OUTPUT
             }
             pop STACK
-            state = 1
         } else if Token is operand {
             push Token to OUTPUT
-            state = 1
         } else if Token is operator {
-            if state is 0 {
+            if State is 0 {
                 mark Token as unary
             }
             while top of STACK is not "(" and (priority of top of STACK > priority of Token) { 
                 pop STACK to OUTPUT
             }
             push Token to STACK
-            state = 1
         } 
+        State = 1 # 其他任何情况，都不是Unary
     }
     while STACK is not empty {
         pop STACK to OUTPUT
     }
 
+下标（c语言中的数组解引用）
 -----------------------
 
-[]
+也就是这个符号
 
-IN: a⇣ [⇣ 3⇣ ]
-ST: [
-OU: a 3
+    []
 
-IN: a [ 3 ]⇣ 
-ST: 
-OU: a 3 []
+在c语言中 a[3] 表示数组a的3号元素（也就是第4个元素）
 
+我们可以耿直地开始，遇到方括号还是按照普通符号一般入栈
+
+    IN: a⇣ [⇣ 3⇣ ]
+    ST: [
+    OU: a 3
+
+等到遇到右方括号，我们可以将一个方括号运算符加入到输出中。
+
+    IN: a [ 3 ]⇣ 
+    ST: 
+    OU: a 3 []
+
+[] 这个符号，可以看成是一个普通的双目运算符。
+
+函数调用
 --------------------------
+
+接下来，我们遇到了一个有趣的问题：如何支持函数调用？
 
 function call
 
-IN: f⇣ (⇣ x⇣ )
-ST: (
-OU: f x
+我们试着耿直地做一下：
 
-IN: f ( x )⇣
-ST: 
-OU: f x (CALL)
+    IN: f⇣ (⇣ x⇣ )
+    ST: (
+    OU: f x
 
-f ( a , b )
-⇓
-f a b , (CALL)
+啊，此处触发我们对小括号设置的规则。我们可耻的失败了。
 
-IN: f⇣ (⇣ a⇣ ,⇣ b⇣ ,⇣ c⇣ )
-ST: ( , ,
-OU: f a b c
+不过，我们虽然撞了南墙，可是可以走得远一些：
 
-IN: f⇣ (⇣ a⇣ ,⇣ b⇣ ,⇣ c+d⇣ )
-ST: ( , , +
-OU: f a b c d
+    IN: f ( x )⇣
+    ST: 
+    OU: f x (CALL)
 
-IN: f ( a , b , c )⇣
-ST: 
-OU: f a b c ,³ 
+这个 (CALL) 表示函数调用。
 
-IN: f ( a , b , c )⇣
-ST: // I'm empty
-OU: f a b c ,³ (CALL)
+这样，在逆波兰表达式中，看到(CALL)，就将栈顶的f和x取出来，调用(CALL)一下。
 
-IN: f ( a , b , c )⇣
-ST: (CALL)
-OU: f a b c ,³ (CALL)
+如果真的是如此就好了。
 
-IN: f (⇣ a , b , c )
-ST: (CALL) (
-OU: f 
+> 魔鬼：只要看到函数，你就让对应它开启的左括号的右括号消失的时候加个 (CALL) 不就行了？
+>
+>你：那么怎么知道它是否是函数呢？
+>
+>魔鬼：函数都是你定义过的，看名字不就知道是否是函数了吗？
+>
+>天使：有的函数是由高阶函数返回的，不是所有的函数都有名字。
+>
+>魔鬼：呵呵，就你屁事儿多。那……这样！左括号左边的紧跟着的那位一定是函数。
+>
+>天使：也可能是运算符
+>
+>魔鬼：去掉运算符就是函数。
+>
+>天使：……
 
+真相就是这样，左括号左边的，除了运算符，就是函数。不可能是数字，或者代表数字的变量。
+
+有了标准去判断是否是函数，我们很开心。
+
+    IN: f (⇣ x )
+
+当遇到这种情况时（左括号之前不是运算符），我们就知道f是函数了。
+
+    IN: f (⇣ x⇣ )
+    ST: (ᶠᵘⁿ
+    OU: f (FUNCTION) x
+
+    IN: f ( x )⇣
+    ST:
+    OU: f (FUNCTION) x (CALL)
+
+我在这里将左括号加上fun角标，以和普通的左括号做区分。可实际上，略一思索我们就发现毫无区分的必要。
+
+在处理逆波兰表达式的时候，如果遇到(CALL)，则将 (FUNCTION)之后的数字（们）作为参数，将(FUNCTION)之前的那个值作为函数。
+
+但转眼，又遇到了新的问题：多元函数，如f(a,b)该怎么办？
+
+如果耿直一些的话（将逗号的优先级自然地看作很低的优先级），就会变成这个局面：
+
+    f ( a , b )
+              ⇓
+              f (FUNCTION) a b , (CALL)
+
+略微一思索，我们发现，这不是不可以接受，但最好能变成这个局面：
+
+    f (FUNCTION) a b (CALL)
+
+所以，很简单，将输出队列尾部的逗号都去掉即可。
+
+甚至，我们的规则在面对无参函数时毫无压力
+
+    IN: f (⇣ )
+    ST: (
+    OU: f (FUNCTION) 
+
+    IN: f ( )⇣
+    ST:
+    OU: f (FUNCTION) (CALL)
+
+当然，任由参数的表达形式多么复杂，我们的规则都是正确的。
+
+    f(1+2, g(h(c)))
+                  ⇓
+                  f (FUNCTION) 1 2 + g (FUNCTION) h (FUNCTION) c (CALL) (CALL) (CALL)
+
+
+                  
 ... else if token == "(" {
     if state == 1 {
         push (CALL) to STACK
