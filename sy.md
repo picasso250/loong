@@ -654,12 +654,15 @@ unary operators
 
 略作思考，我们就得出了标准：
 
->式子的开头，或者紧跟着括号。
+>式子的开头，或者紧跟着括号，或者紧跟着其他运算符
 
-    - 1 + ( - 2 - 3 )
-    │───────┘   │
-    unary       binary
-    单目         双目
+                双目
+                binary
+        ┌───────┤
+    - 1 + ( - 2 - - 3 )
+    ├───────┴─────┘  
+    unary      
+    单目         
 
 我们用 -₁ 表示单目运算符
 -₂表示双目运算符
@@ -678,15 +681,16 @@ unary operators
     while (read Token from INPUT) is OK {
         if Token is "(" {
             push Token to STACK
-            State = 0 # 接下来的Token紧跟着括号
-            continue
+            State = 0 # 紧跟着括号的就是单目运算符
         } else if Token is ")" {
             while top of STACK is not "(" {
                 pop STACK to OUTPUT
             }
             pop STACK
+            State = 1
         } else if Token is operand {
             push Token to OUTPUT
+            State = 1
         } else if Token is operator {
             if State is 0 {
                 mark Token as unary
@@ -695,8 +699,8 @@ unary operators
                 pop STACK to OUTPUT
             }
             push Token to STACK
+            State = 0 # 紧跟着其他符号的也是单目运算符
         } 
-        State = 1 # 其他任何情况，都不是Unary
     }
     while STACK is not empty {
         pop STACK to OUTPUT
@@ -709,9 +713,9 @@ unary operators
 
     []
 
-在c语言中 a[3] 表示数组a的3号元素（也就是第4个元素）
+在c语言中 `a[3]` 表示数组a的3号元素（也就是第4个元素）
 
-我们可以耿直地开始，遇到方括号还是按照普通符号一般入栈
+我们可以耿直地开始，遇到左方括号还是按照普通符号一般入栈
 
     IN: a⇣ [⇣ 3⇣ ]
     ST: [
@@ -724,6 +728,46 @@ unary operators
     OU: a 3 []
 
 [] 这个符号，可以看成是一个普通的双目运算符。
+
+伪代码如下：
+
+    State = 0
+    while (read Token from INPUT) is OK {
+        # 左方括号和普通符号一样处理即可
+        # 我们只需要处理右方括号
+        if Token is "]" {
+            while top of STACK is not "[" {
+                pop STACK to OUTPUT
+            }
+            pop STACK
+            push "[]" to OUTPUT
+            State = 0
+        } else if Token is "(" {
+            push Token to STACK
+            State = 0
+        } else if Token is ")" {
+            while top of STACK is not "(" {
+                pop STACK to OUTPUT
+            }
+            pop STACK
+            State = 1
+        } else if Token is operand {
+            push Token to OUTPUT
+            State = 1
+        } else if Token is operator {
+            if State is 0 {
+                mark Token as unary
+            }
+            while top of STACK is not "(" and (priority of top of STACK > priority of Token) { 
+                pop STACK to OUTPUT
+            }
+            push Token to STACK
+            State = 0
+        } 
+    }
+    while STACK is not empty {
+        pop STACK to OUTPUT
+    }
 
 函数调用
 --------------------------
@@ -760,7 +804,7 @@ function call
 >
 >天使：有的函数是由高阶函数返回的，不是所有的函数都有名字。
 >
->魔鬼：呵呵，就你屁事儿多。那……这样！左括号左边的紧跟着的那位一定是函数。
+>魔鬼：呵呵，就你屁事儿多。那……这样！左括号左边的那位一定是函数。
 >
 >天使：也可能是运算符
 >
@@ -780,17 +824,19 @@ function call
     ST: (ᶠᵘⁿ
     OU: f (FUNCTION) x
 
+我在这里将左括号加上fun角标，以便和普通的左括号做区分。
+
     IN: f ( x )⇣
     ST:
     OU: f (FUNCTION) x (CALL)
 
-我在这里将左括号加上fun角标，以和普通的左括号做区分。可实际上，略一思索我们就发现毫无区分的必要。
+当遇到右括号时，如果栈中的左括号是有函数(fun)标记的，则在输出中加入(CALL)
 
 在处理逆波兰表达式的时候，如果遇到(CALL)，则将 (FUNCTION)之后的数字（们）作为参数，将(FUNCTION)之前的那个值作为函数。
 
 但转眼，又遇到了新的问题：多元函数，如f(a,b)该怎么办？
 
-如果耿直一些的话（将逗号的优先级自然地看作很低的优先级），就会变成这个局面：
+如果耿直一些的话（将逗号的优先级自然地看作很低的优先级），就会变成这么一个局面：
 
     f ( a , b )
               ⇓
@@ -814,59 +860,66 @@ function call
 
 当然，任由参数的表达形式多么复杂，我们的规则都是正确的。
 
-    f(1+2, g(h(c)))
+    f(1+2, g(h)(c)) # 这里的g是个高阶函数，返回一个函数
                   ⇓
-                  f (FUNCTION) 1 2 + g (FUNCTION) h (FUNCTION) c (CALL) (CALL) (CALL)
+                  f (FUNCTION) 1 2 + g (FUNCTION) h (CALL) (FUNCTION) c (CALL) (CALL) 
 
+接下来我们考虑伪代码。显然当我们遇到左括号时，需要查看一下前面是不是运算符（不是运算符，就说明前面是函数）
 
-                  
-... else if token == "(" {
-    if state == 1 {
-        push (CALL) to STACK
+那么现在需要一个新的状态变量。
+
+    State = 0
+    IsOp = 1 # 左括号前面是否是符号，没有符号也归类为符号情况进行统一处理
+    while (read Token from INPUT) is OK {
+        if Token is "]" {
+            while top of STACK is not "[" {
+                pop STACK to OUTPUT
+            }
+            pop STACK
+            push "[]" to OUTPUT
+            State = 0
+            IsOp = 0
+        } else if Token is "(" {
+            if IsOp is 0 { # function call!
+                mark Token as function call
+                push "(FUNCTION)" to OUTPUT
+            }
+            push Token to STACK
+            State = 0
+            IsOp = 0
+        } else if Token is ")" {
+            while top of STACK is not "(" {
+                pop STACK to OUTPUT
+            }
+            Token = pop STACK
+            if Token is function call {
+                # 左括号被标记了 fun
+                push "(CALL)" to OUTPUT
+            }
+            State = 1
+            IsOp = 0
+        } else if Token is operand {
+            push Token to OUTPUT
+            State = 1
+            IsOp = 0
+        } else if Token is operator {
+            if State is 0 {
+                mark Token as unary
+            }
+            while top of STACK is not "(" and (priority of top of STACK > priority of Token) {
+                pop STACK to OUTPUT
+            }
+            push Token to STACK
+            State = 1
+            IsOp = 1
+        }
     }
-    push "(" to STACK
-} ...
-
-// meet ")"
-n = 1;
-while (token = pop stack) != "(" {
-    if token is "," {
-        n++;
+    while STACK is not empty {
+        pop STACK to OUTPUT
     }
-}
-push ",ⁿ" to STACK
-
-⚠️
-g + f ( )
-⇓
-g f ,¹ (CALL) +      
-⚠️
-
-// meet ")"
-n = 0;
-if state != 0 { // not start of (
-    n = 1;
-}
-while (token = pop stack) != "(" {
-    if token is "," {
-        n++;
-    }
-}
-if top of STACK == "(CALL)" {
-    push (CALL)ⁿ to STACK;
-} else {
-    push ,ⁿ to STACK;
-}
-
-g + f ( )
-⇓
-g f (CALL)⁰ +   
-
-(*fp)(1,3)
-
------------------------
 
 结合方向
+-----------------------
 
 a . b . c 
 
