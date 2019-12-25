@@ -959,7 +959,7 @@ function call
 
 当然，他们两个名义上的优先级相同，但毕竟有个先算哪一个的实际问题。
 
-    function real compare A and B {
+    function real compare operator A and B {
         if priority of A != priority of B {
             return priority of A - priority of B;
         } else {
@@ -1006,7 +1006,7 @@ function call
             if State is 0 {
                 mark Token as unary
             }
-            while top of STACK is not "(" and ((real compare (top of STACK) and Token) > 0) {
+            while top of STACK is not "(" and ((real compare operator (top of STACK) and Token) > 0) {
                 pop STACK to OUTPUT
             }
             push Token to STACK
@@ -1017,3 +1017,42 @@ function call
     while STACK is not empty {
         pop STACK to OUTPUT
     }
+
+这一趴纯属作者自己搞怪，你们可以走啦
+-----------------------
+
+实际上，我所使用的伪代码是经过仔细设计的（花费了我三分钟呢），是可以使用程序解析的。
+
+我们刨除掉while if 语句什么的，只说两个规则
+
+1. 变量名都是以大写字母开头
+2. 函数名中的单词以小写字母开头，可以包括空格，优先匹配函数名字长的。
+
+至于其他的，比如函数调用优先级比运算符优先级高，和c语言是一样的。
+
+函数的定义方式如下：
+
+    function verb1 verb2 (Var1) conj1 (Var2) maybe suffix {
+        ...
+    }
+
+说了那么多废话，我只是想引出一个问题：如何用Shunting Yard 算法解析这门语言的表达式？
+
+答案：
+1. using space as operator, priority of space is as high as "( )"
+2. scan, if SUCCESS, mark it
+3. scan from right, call SUCCESS
+4. sub it with its result
+5. go to 2
+
+IN: top of STACK is not "("
+OU: top of (SPACE) STACK (SPACE) is (SPACE) not (SPACE) "(" (SPACE)
+
+ST: top of (SPACE) STACK (SPACE) (SUCCESS) is (SPACE) not (SPACE) "(" (SPACE)
+
+ST: A is (SPACE) not (SPACE) "(" (SPACE)
+
+
+top of STACK is not X and Y ((real compare (top of STACK) and Token) > 0) 
+
+(FUNCTION is not X) (FUNCTION top of X) STACK (CALL) 
