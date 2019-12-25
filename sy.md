@@ -881,7 +881,7 @@ function call
             IsOp = 0
         } else if Token is "(" {
             if IsOp is 0 { # function call!
-                mark Token as function call
+                mark Token as fun
                 push "(FUNCTION)" to OUTPUT
             }
             push Token to STACK
@@ -892,7 +892,7 @@ function call
                 pop STACK to OUTPUT
             }
             Token = pop STACK
-            if Token is function call {
+            if Token is fun {
                 # 左括号被标记了 fun
                 push "(CALL)" to OUTPUT
             }
@@ -921,107 +921,99 @@ function call
 结合方向
 -----------------------
 
-a . b . c 
+本来这是应该一开始讲清楚的。可这个问题实在是一个我们已经解决过的问题，所以，我想在最后的时候，顺嘴一提。
 
-foo.bar()
+还是以c语言为例
+点号(.)这个运算符是从左往右计算的。
 
-IN: a . b .⇣ c 
-ST: .
-OU: a b
+换言之，点号(.)的结合性是左结合。
 
-(a.b).c  √
-a.(b.c)  ×
+如 a . b . c 实际上是 (a . b) . c
 
-结合性，谁先和谁结合
+而下面两个单目运算符就都是右结合的（且优先级相同）
 
-从左边开始算，就叫左结合。
+*&a 实际是 * ( & a )
 
-*&a
+我们看看那个著名的命运岔路口：
 
-IN: a ⊙ b ⊙ᵇ⇣ c 
-ST: ⊙ᵃ
-OU: a b
+    IN: a . b .⇣ c 
+    ST: .
+    OU: a b
 
-compare ⊙ᵃ and ⊙ᵇ
-left, ⊙ᵃ is higher
-right, ⊙ᵇ is higher
+接下来，不外乎两种情况：
 
-func compare(a, b) {
-    if priority of a != priority of b {
-        return a - b;
-    } else {
-        return a is left associative ? 1 : -1;
-    }
-}
+    (a.b).c  √
+    a.(b.c)  ×
 
------------------------
-3+a[4]
-+[]
-3a
+当然，我们为了做区分，用角标a和b作为区分
 
+    IN: a ⊙ᵃ b ⊙ᵇ⇣ c 
+    ST: ⊙ᵃ
+    OU: a b
 
-priority of "(" = -∞;
-priority of "[" = -∞;
-priority of "[]" = ∞;
-priority of "(CALL)" = ∞;
-// 0 is initial state
-state = 0; // 0 is start or start of () or [], 1 else
-while (read token from IN) == OK {
-    if token is operand {
-        push token to OUTPUT;
-        state = 1;
-    } else if token is operator {
-        if state == 0 {
-            mark operator as unary;
-        }
-        while priority of top of STACK > priority of token {
-            Op = pop STACK;
-            push Op to OUTPUT;
-        }
-        push token to STACK;
-        state = 1;
-    } else if token is "(" {
-        if state == 1 {
-            push (CALL) to STACK;
-        }
-        push token to STACK;
-        state = 0;
-    } else if token is ")" {
-        n = 0;
-        if state == 1 {
-            n = 1;
-        }
-        while top of STACK is not "(" {
-            if top of STACK is "," {
-                n++;
-                pop STACK;
-            } else {
-                Op = pop STACK;
-                push Op to OUTPUT;
-            }
-        }
-        pop STACK;
-        if top of STACK == "(CALL)" {
-            pop STACK;
-            push (CALL)ⁿ to OUTPUT;
+比较 ⊙ᵃ 和 ⊙ᵇ
+
+如果是左结合, ⊙ᵃ 的“优先级更高”
+
+如果是右结合, ⊙ᵇ 的“优先级更高”
+
+当然，他们两个名义上的优先级相同，但毕竟有个先算哪一个的实际问题。
+
+    function real compare A and B {
+        if priority of A != priority of B {
+            return priority of A - priority of B;
         } else {
-            push ,ⁿ to OUTPUT;
+            return A is left associative ? 1 : -1;
         }
-        state = 1;
-    } else if token is "[" {
-        push "[]" to STACK;
-        push token to STACK;
-        state = 0;
-    } else if token is "]" {
-        while top of STACK is not "[" {
-            Op = pop STACK;
-            push Op to OUTPUT;
-        }
-        pop STACK;
-        state = 1;
     }
-}
-while STACK is not empty {
-    Op = pop STACK;
-    push Op to OUTPUT;
-}
+
+这是我最后的伪代码啦
+
+    State = 0
+    IsOp = 1
+    while (read Token from INPUT) is OK {
+        if Token is "]" {
+            while top of STACK is not "[" {
+                pop STACK to OUTPUT
+            }
+            pop STACK
+            push "[]" to OUTPUT
+            State = 0
+            IsOp = 0
+        } else if Token is "(" {
+            if IsOp is 0 {
+                mark Token as fun
+                push "(FUNCTION)" to OUTPUT
+            }
+            push Token to STACK
+            State = 0
+            IsOp = 0
+        } else if Token is ")" {
+            while top of STACK is not "(" {
+                pop STACK to OUTPUT
+            }
+            Token = pop STACK
+            if Token is fun {
+                push "(CALL)" to OUTPUT
+            }
+            State = 1
+            IsOp = 0
+        } else if Token is operand {
+            push Token to OUTPUT
+            State = 1
+            IsOp = 0
+        } else if Token is operator {
+            if State is 0 {
+                mark Token as unary
+            }
+            while top of STACK is not "(" and ((real compare (top of STACK) and Token) > 0) {
+                pop STACK to OUTPUT
+            }
+            push Token to STACK
+            State = 1
+            IsOp = 1
+        }
+    }
+    while STACK is not empty {
+        pop STACK to OUTPUT
+    }
