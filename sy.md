@@ -431,6 +431,11 @@ OU: d
         pop STACK to OUTPUT
     }
 
+其中 pop STACK to OUTPUT 相当于：
+
+    a = STACK.pop()
+    OUTPUT.push(a)
+
 括号怎么办？
 ---
 
@@ -462,7 +467,9 @@ OU: d
 我们也要学习一个。
 
 带有括号？
+
 我们先将括号里的转了，这个我们会。
+
 转过之后的结果作为一个整体（看作一个数字）。我们也会。
 
 举个例子：
@@ -483,141 +490,212 @@ OU: d
 
 于是问题变成了：
 
-    IN: 1 * (⇣ 2 + 3 )
+    IN: 1 * ⟦2 3 +⟧⇣
     ST: *
     OU: 1
-    
-IN: 1 * (⇣ 2 + 3 )
-S₀: * ‖ S₁: 
-OU: 1 ‖
 
-IN: 1 * ( 2⇣ + 3 )
-S₀: * ‖ S₁: 
-O₀: 1 ‖ O₁: 2
+    IN: 1 * ⟦2 3 +⟧⇣
+    ST: *
+    OU: 1 ⟦2 3 +⟧ 
 
-IN: 1 * ( 2⇣ + 3 )
-S₀: * ‖ S₁: 
-O₀: 1 ‖ O₁: 2
+    IN: 1 * ⟦2 3 +⟧⇣
+    ST: 
+    OU: 1 ⟦2 3 +⟧ *
 
-IN: 1 * ( 2 +⇣ 3⇣ )
-S₀: * ‖ S₁: +
-O₀: 1 ‖ O₁: 2 3
+结果是 
 
-IN: 1 * ( 2 +⇣ 3⇣ )
-S₀: * ‖ S₁: 
-O₀: 1 ‖ O₁: 2 3 +
+    1 * ( 2 + 3 )    ⇨    1 2 3 + *
 
-IN: 1 * ⟦2+3⟧
-S₀: * ‖ S₁: 
-O₀: 1 ‖ O₁: ⟦2+3⟧
+完美！
 
-IN: 1 * ⟦2+3⟧ ...
-S₀: * ‖ S₁: ‖ S₂
-O₀: 1 ‖ O₁: ⟦2+3⟧ ‖ O₂
+我已经想出了递归的算法：
 
-IN: 1 * ⟦2+3⟧ ...
-S₀: *
-O₀: 1 ⟦2+3⟧ 
-
-let's go back to
-
-IN: 1 * (⇣ 2 + 3 )
-S₀: * 
-OU: 1 
-
-IN: 1 * (⇣ 2 + 3 )
-S₀: * (
-OU: 1 
-
-IN: 1 * ( 2 + 3 )⇣
-S₀: * ( +
-OU: 1 2 3 
-
-IN: 1 * ( 2 + 3 )⇣
-S₀: * ( 
-OU: 1 2 3 +
-
-IN: 1 * ( 2 + 3 )
-S₀: *  
-OU: 1 2 3 +
-
-IN: 1 * ( 2 + 3 )
-S₀: 
-OU: 1 2 3 + *
-
-1 2 3 + *  -->  1 * ( 2 + 3 )
-
-priority of "(" = -∞;
-while (read token from IN) == OK {
-    if token is operand {
-        push token to OUTPUT;
-    } else if token is operator {
-        // '(' is smallest, '(' is barrier
-        while priority of top of STACK > priority of token { 
-            Op = pop STACK;
-            push Op to OUTPUT;
+    # 这个function和之前的那个天真的算法一模一样
+    function naive shunting yard (INPUT) {
+        while (read Token from INPUT) is OK {
+            if Token is operand { 
+                push Token to OUTPUT
+            } else if Token is operator {
+                while priority of top of STACK > priority of Token {
+                    pop STACK to OUTPUT
+                }
+                push Token to STACK
+            }
         }
-        push token to STACK;
-    } else if token is "(" {
-        push token to STACK; // begin of a virtual stack
-    } else if token is ")" {
-        while top of STACK is not "(" {
-            Op = pop STACK;
-            push Op to OUTPUT;
+        while STACK is not empty {
+            pop STACK to OUTPUT
         }
-        pop STACK; // pop "("
     }
-}
-while STACK is not empty {
-    Op = pop STACK;
-    push Op to OUTPUT;
-}
+    # 下面是带有小括号的算法，用到了上面的代码
+    while (read Token from INPUT) is OK {
+        # 以下的两个if分支和之前的一毛一样，不用关心
+        if Token is operand { 
+            push Token to OUTPUT
+        } else if Token is operator {
+            while priority of top of STACK > priority of Token {
+                pop STACK to OUTPUT
+            }
+            push Token to STACK
+        } else if Token is '(' { # 此处！
+            # 搜集括号里的东西
+            while (read Token from INPUT) is not ')' {
+                push Token to NewInput
+            } # 此处可以检测一下括号匹配情况，为了防止打扰主线剧情我们就不检测了
+            push group (naive shunting yard NewInput) to OUTPUT
+        } # 当然你此处你也需要检测一下括号匹配情况，但是我省略了
+    }
+    while STACK is not empty {
+        pop STACK to OUTPUT
+    }
+    
+不过，上面的代码很不优雅（有重复）。
 
+更严重的问题是，想象你是一个古早的计算机科学大佬，你肯定想要找出这个递归算法的对应的迭代版本。
 
+我们来深入的看一下这个计算过程，依然是用简单的例子：
+
+显然我们的算法中，用到了两个栈，我们分别用S₀和 S₁命名。 
+
+当遇到括号时，我们新开了栈(S₁)
+
+    IN: 1 * (⇣ 2 + 3 )
+    S₀: * ‖ S₁: 
+    OU: 1 ‖
+
+同样的，我们也要新开一个输出。
+
+    IN: 1 * ( 2⇣ + 3 )
+    S₀: * ‖ S₁: 
+    O₀: 1 ‖ O₁: 2
+
+    IN: 1 * ( 2⇣ + 3 )
+    S₀: * ‖ S₁: 
+    O₀: 1 ‖ O₁: 2
+
+    IN: 1 * ( 2 +⇣ 3⇣ )
+    S₀: * ‖ S₁: +
+    O₀: 1 ‖ O₁: 2 3
+
+    IN: 1 * ( 2 +⇣ 3⇣ )
+    S₀: * ‖ S₁: 
+    O₀: 1 ‖ O₁: 2 3 +
+
+到此为止，我们已经转换完成了括号里的东西。
+
+此时 S₁ 的使命已经完成。对应的标志性事件是：我们遇到了右括号。
+
+    IN: 1 * ( 2 +⇣ 3⇣ )
+    S₀: *
+    O₀: 1 ‖ O₁: 2 3 +
+
+S₁ 消失了（用完就抛弃人家）。
+
+    IN: 1 * ( 2 +⇣ 3⇣ )
+    S₀: *
+    O₀: 1 ‖ O₁: 2 3 +
+
+我们惊讶的发现，此时的O₀ 和 O₁ 竟然浑然天成，顺序是对的。
+
+祭出我们的双框括号大法验证一下它确实是正确的。
+
+    IN: 1 * ⟦2+3⟧
+    S₀: * 
+    O₀: 1 ‖ O₁: ⟦2+3⟧
+
+于是，我们似乎得到了两点启示：
+
+1. 遇到左括号开新栈，遇到右括号让新栈消失
+2. 输出可以用同一个输出队列，不会乱。
+
+而且我们可以更进一步：栈也用同一个，不会乱。只要标记新栈开始的地方，然后遇到右括号时，让那个开始标记消失就行了。
+
+理所当然的，我们用左括号'(' 本身来做标记。
+
+于是，我们的伪代码如下：
+
+    while (read Token from INPUT) is OK {
+        if Token is "(" {
+            push Token to STACK # begin of a virtual stack
+        } else if Token is ")" {
+            while top of STACK is not "(" {
+                pop STACK to OUTPUT
+            }
+            pop STACK # pop "("
+        } else if Token is operand {
+            push Token to OUTPUT
+        } else if Token is operator {
+            # 注意，我们的“新栈”的开头标志是左括号，不要做过界！
+            while top of STACK is not "(" and (priority of top of STACK > priority of Token) { 
+                pop STACK to OUTPUT
+            }
+            push Token to STACK
+        }
+    }
+    while STACK is not empty {
+        pop STACK to OUTPUT
+    }
+
+单目运算符
 --------------------------------
+
+其实，以上我们已经重新发明了 shunting yard 算法。不过，我们可以走得更远，我们顺便将之扩展一下，使得它能支持单目运算符。
 
 unary operators
 
-start or start of () or []
+所谓单目运算符，比如
 
-- 1 + ( - 2 - 3 )
-│───────┘   │
-unary       binary
+    -1
 
+那个负号就是单目运算符，因为它只有一个操作数。
 
-priority of "(" = -∞;
-// 0 is initial state
-state = 0; // 0 is start or start of () or [], 1 else
-while (read token from IN) == OK {
-    if token is operand {
-        push token to OUTPUT;
-        state = 1;
-    } else if token is operator {
-        if state == 0 {
-            mark operator as unary;
-        }
-        while priority of top of STACK > priority of token { 
-            Op = pop STACK;
-            push Op to OUTPUT;
-        }
-        push token to STACK;
-        state = 1;
-    } else if token is "(" {
-        push token to STACK;
-        state = 0;
-    } else if token is ")" {
-        while top of STACK is not "(" {
-            Op = pop STACK;
-            push Op to OUTPUT;
-        }
-        pop STACK;
-        state = 1;
+不过难点在于，负号同时也是减号。
+
+那么，怎么判断它是负号还是减号呢？
+
+略作思考，我们就得出了标准：
+
+>式子的开头，或者紧跟着括号。
+
+    - 1 + ( - 2 - 3 )
+    │───────┘   │
+    unary       binary
+    单目         双目
+
+我们用一个简单的技巧，这个技巧在《C编程语言》这本神书的第一个程序里有用到。
+
+我们将使用State变量来标记式子的开头，或者紧跟着括号与否。
+
+0 表示开头或者紧跟着括号
+
+    # 一开始，式子的开头，肯定要是0
+    state = 0
+    while (read Token from INPUT) is OK {
+        if Token is "(" {
+            push Token to STACK
+            state = 0
+        } else if Token is ")" {
+            while top of STACK is not "(" {
+                pop STACK to OUTPUT
+            }
+            pop STACK
+            state = 1
+        } else if Token is operand {
+            push Token to OUTPUT
+            state = 1
+        } else if Token is operator {
+            if state is 0 {
+                mark Token as unary
+            }
+            while top of STACK is not "(" and (priority of top of STACK > priority of Token) { 
+                pop STACK to OUTPUT
+            }
+            push Token to STACK
+            state = 1
+        } 
     }
-}
-while STACK is not empty {
-    Op = pop STACK;
-    push Op to OUTPUT;
-}
+    while STACK is not empty {
+        pop STACK to OUTPUT
+    }
 
 -----------------------
 
