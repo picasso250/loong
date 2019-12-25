@@ -6,20 +6,42 @@ IN --------\-/-------- OUT
             | Stack
 
 
+表达式·普通
+
+1+2×3
 
 1+(2*3)
 
+波兰表达式（前缀运算符）（S表达式）
+
 (+ 1 (* 2 3))
+
 + 1 * 2 3
+
+逆波兰表达式
 
 3 2 * 1 +
 
+开个玩笑
 
-    ┌─┬ +
-┌─┬ * │  
-3 2   1  
+将运算符放在右边
 
+(1 (2 3 *) +)
 
+1 2 3 * +
+
+┌─────┬ +
+│ ┌─┬ *   
+1 2 3     
+
+now example
+
+(1+2)*3
+
+ANSWER:
+1 2 + 3 *
+
+那么，什么是sy呢？
 
 IN: 3 2 * 1 +
 ST:
@@ -415,10 +437,12 @@ IN: f (⇣ a , b , c )
 ST: (CALL) (
 OU: f 
 
-... else if token == "(" && state == 1 {
-    push (CALL) to STACK
+... else if token == "(" {
+    if state == 1 {
+        push (CALL) to STACK
+    }
     push "(" to STACK
-}
+} ...
 
 // meet ")"
 n = 1;
@@ -494,3 +518,74 @@ func compare(a, b) {
     }
 }
 
+-----------------------
+3+a[4]
++[]
+3a
+
+
+priority of "(" = -∞;
+priority of "[" = -∞;
+priority of "[]" = ∞;
+priority of "(CALL)" = ∞;
+// 0 is initial state
+state = 0; // 0 is start or start of () or [], 1 else
+while (read token from IN) == OK {
+    if token is operand {
+        push token to OUTPUT;
+        state = 1;
+    } else if token is operator {
+        if state == 0 {
+            mark operator as unary;
+        }
+        while priority of top of STACK > priority of token {
+            Op = pop STACK;
+            push Op to OUTPUT;
+        }
+        push token to STACK;
+        state = 1;
+    } else if token is "(" {
+        if state == 1 {
+            push (CALL) to STACK;
+        }
+        push token to STACK;
+        state = 0;
+    } else if token is ")" {
+        n = 0;
+        if state == 1 {
+            n = 1;
+        }
+        while top of STACK is not "(" {
+            if top of STACK is "," {
+                n++;
+                pop STACK;
+            } else {
+                Op = pop STACK;
+                push Op to OUTPUT;
+            }
+        }
+        pop STACK;
+        if top of STACK == "(CALL)" {
+            pop STACK;
+            push (CALL)ⁿ to OUTPUT;
+        } else {
+            push ,ⁿ to OUTPUT;
+        }
+        state = 1;
+    } else if token is "[" {
+        push "[]" to STACK;
+        push token to STACK;
+        state = 0;
+    } else if token is "]" {
+        while top of STACK is not "[" {
+            Op = pop STACK;
+            push Op to OUTPUT;
+        }
+        pop STACK;
+        state = 1;
+    }
+}
+while STACK is not empty {
+    Op = pop STACK;
+    push Op to OUTPUT;
+}
