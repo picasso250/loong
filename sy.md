@@ -846,7 +846,7 @@ function call
 
     f (FUNCTION) a b (CALL)
 
-所以，很简单，将输出队列尾部的逗号都去掉即可。
+所以，很简单，将输出队列尾部的逗号全都去掉即可。
 
 甚至，我们的规则在面对无参函数时毫无压力
 
@@ -894,6 +894,9 @@ function call
             Token = pop STACK
             if Token is fun {
                 # 左括号被标记了 fun
+                while top of OUTPUT is "," {
+                    pop OUTPUT
+                }
                 push "(CALL)" to OUTPUT
             }
             State = 1
@@ -961,9 +964,9 @@ function call
 
     function real compare operator A and B {
         if priority of A != priority of B {
-            return priority of A - priority of B;
+            return priority of A - priority of B
         } else {
-            return A is left associative ? 1 : -1;
+            return A is left associative ? 1 : -1
         }
     }
 
@@ -994,6 +997,9 @@ function call
             }
             Token = pop STACK
             if Token is fun {
+                while top of OUTPUT is "," {
+                    pop OUTPUT
+                }
                 push "(CALL)" to OUTPUT
             }
             State = 1
